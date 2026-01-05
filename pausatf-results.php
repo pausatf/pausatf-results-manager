@@ -237,6 +237,11 @@ final class Plugin {
         require_once PAUSATF_RESULTS_DIR . 'includes/class-club-manager.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-csv-importer.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-data-exporter.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-athlete-claim.php';
+
+        // Load integrations
+        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-hytek-importer.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-runsignup-integration.php';
 
         // Admin
         if (is_admin()) {
