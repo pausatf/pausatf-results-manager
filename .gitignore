@@ -1,0 +1,24 @@
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+/vendor/
+/node_modules/
+
+# Build
+/dist/
+*.zip
+
+# Logs
+*.log
+debug.log
+
+# Local config
+.env
+*.local.php
