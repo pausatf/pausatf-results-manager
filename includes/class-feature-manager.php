@@ -316,6 +316,20 @@ class FeatureManager {
             'files' => ['includes/class-webhooks.php'],
             'has_tables' => true,
         ]);
+
+        self::register_feature('rdf_support', [
+            'name' => __('RDF & Linked Data', 'pausatf-results'),
+            'description' => __('Export data as RDF using Schema.org, FOAF, and Dublin Core schemas. Includes SPARQL query endpoint.', 'pausatf-results'),
+            'category' => 'api',
+            'default' => false,
+            'toggleable' => true,
+            'icon' => 'dashicons-networking',
+            'files' => [
+                'includes/class-rdf-exporter.php',
+                'includes/class-sparql-endpoint.php',
+            ],
+            'endpoints' => ['/rdf/', '/sparql'],
+        ]);
     }
 
     /**

@@ -3,7 +3,7 @@
  * Plugin Name: PAUSATF Results Manager
  * Plugin URI: https://github.com/pausatf/pausatf-results-manager
  * Description: Import, manage, and display PAUSATF legacy competition results with full athlete tracking.
- * Version: 2.1.0
+ * Version: 2.2.0
  * Author: PAUSATF
  * Author URI: https://www.pausatf.org
  * License: GPL v2 or later
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('PAUSATF_RESULTS_VERSION', '2.1.0');
+define('PAUSATF_RESULTS_VERSION', '2.2.0');
 define('PAUSATF_RESULTS_FILE', __FILE__);
 define('PAUSATF_RESULTS_DIR', plugin_dir_path(__FILE__));
 define('PAUSATF_RESULTS_URL', plugin_dir_url(__FILE__));
@@ -328,6 +328,11 @@ final class Plugin {
             require_once PAUSATF_RESULTS_DIR . 'includes/class-webhooks.php';
         }
 
+        if (FeatureManager::is_enabled('rdf_support')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-rdf-exporter.php';
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-sparql-endpoint.php';
+        }
+
         // Load integrations (conditionally)
         if (FeatureManager::is_enabled('hytek_importer')) {
             require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-hytek-importer.php';
@@ -404,6 +409,18 @@ final class Plugin {
             'pausatf-results-settings',
             [$this, 'render_settings_page']
         );
+
+        // Conditionally add Semantic Web page
+        if (FeatureManager::is_enabled('rdf_support')) {
+            add_submenu_page(
+                'pausatf-results',
+                __('Semantic Web', 'pausatf-results'),
+                __('RDF/SPARQL', 'pausatf-results'),
+                'manage_options',
+                'pausatf-results-semantic',
+                [$this, 'render_semantic_page']
+            );
+        }
     }
 
     public function admin_assets(string $hook): void {
@@ -442,6 +459,10 @@ final class Plugin {
 
     public function render_settings_page(): void {
         include PAUSATF_RESULTS_DIR . 'admin/views/settings.php';
+    }
+
+    public function render_semantic_page(): void {
+        include PAUSATF_RESULTS_DIR . 'admin/views/semantic-web.php';
     }
 }
 
