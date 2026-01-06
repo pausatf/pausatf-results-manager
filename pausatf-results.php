@@ -3,7 +3,7 @@
  * Plugin Name: PAUSATF Results Manager
  * Plugin URI: https://github.com/pausatf/pausatf-results-manager
  * Description: Import, manage, and display PAUSATF legacy competition results with full athlete tracking.
- * Version: 1.0.0
+ * Version: 2.0.0
  * Author: PAUSATF
  * Author URI: https://www.pausatf.org
  * License: GPL v2 or later
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('PAUSATF_RESULTS_VERSION', '1.0.0');
+define('PAUSATF_RESULTS_VERSION', '2.0.0');
 define('PAUSATF_RESULTS_FILE', __FILE__);
 define('PAUSATF_RESULTS_DIR', plugin_dir_path(__FILE__));
 define('PAUSATF_RESULTS_URL', plugin_dir_url(__FILE__));
@@ -78,6 +78,12 @@ final class Plugin {
     public function activate(): void {
         // Create custom database tables
         $this->create_tables();
+
+        // Create additional tables from components
+        RecordsDatabase::create_table();
+        RankingSystem::create_table();
+        GrandPrix::create_tables();
+        Webhooks::create_tables();
 
         // Schedule sync cron
         if (!wp_next_scheduled('pausatf_results_sync')) {
@@ -230,6 +236,14 @@ final class Plugin {
         require_once PAUSATF_RESULTS_DIR . 'includes/parsers/class-parser-pre.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/parsers/class-parser-word.php';
 
+        // Load USATF rules engine
+        require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-rules-engine.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-age-divisions.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-record-categories.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-competition-rules.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-championship-rules.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-event-standards.php';
+
         // Load core classes
         require_once PAUSATF_RESULTS_DIR . 'includes/class-results-importer.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-athlete-database.php';
@@ -238,10 +252,23 @@ final class Plugin {
         require_once PAUSATF_RESULTS_DIR . 'includes/class-csv-importer.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-data-exporter.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-athlete-claim.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-records-database.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-ranking-system.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-athlete-dashboard.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-certificates.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-grand-prix.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-race-director-portal.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-graphql-api.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-webhooks.php';
 
         // Load integrations
         require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-hytek-importer.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-runsignup-integration.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-athlinks-integration.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-usatf-verification.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-timing-systems.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-strava-sync.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-ultrasignup-import.php';
 
         // Admin
         if (is_admin()) {
