@@ -3,7 +3,7 @@
  * Plugin Name: PAUSATF Results Manager
  * Plugin URI: https://github.com/pausatf/pausatf-results-manager
  * Description: Import, manage, and display PAUSATF legacy competition results with full athlete tracking.
- * Version: 2.0.0
+ * Version: 2.1.0
  * Author: PAUSATF
  * Author URI: https://www.pausatf.org
  * License: GPL v2 or later
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('PAUSATF_RESULTS_VERSION', '2.0.0');
+define('PAUSATF_RESULTS_VERSION', '2.1.0');
 define('PAUSATF_RESULTS_FILE', __FILE__);
 define('PAUSATF_RESULTS_DIR', plugin_dir_path(__FILE__));
 define('PAUSATF_RESULTS_URL', plugin_dir_url(__FILE__));
@@ -76,14 +76,36 @@ final class Plugin {
     }
 
     public function activate(): void {
-        // Create custom database tables
+        // Load feature manager first
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-feature-manager.php';
+
+        // Create custom database tables (core - always needed)
         $this->create_tables();
 
-        // Create additional tables from components
-        RecordsDatabase::create_table();
-        RankingSystem::create_table();
-        GrandPrix::create_tables();
-        Webhooks::create_tables();
+        // Create additional tables from components (conditionally based on features)
+        if (FeatureManager::is_enabled('records_database')) {
+            if (class_exists('PAUSATF\\Results\\RecordsDatabase')) {
+                RecordsDatabase::create_table();
+            }
+        }
+
+        if (FeatureManager::is_enabled('ranking_system')) {
+            if (class_exists('PAUSATF\\Results\\RankingSystem')) {
+                RankingSystem::create_table();
+            }
+        }
+
+        if (FeatureManager::is_enabled('grand_prix')) {
+            if (class_exists('PAUSATF\\Results\\GrandPrix')) {
+                GrandPrix::create_tables();
+            }
+        }
+
+        if (FeatureManager::is_enabled('webhooks')) {
+            if (class_exists('PAUSATF\\Results\\Webhooks')) {
+                Webhooks::create_tables();
+            }
+        }
 
         // Schedule sync cron
         if (!wp_next_scheduled('pausatf_results_sync')) {
@@ -229,48 +251,113 @@ final class Plugin {
     }
 
     private function load_components(): void {
-        // Load parsers
+        // Load Feature Manager first (always required)
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-feature-manager.php';
+
+        // Load parsers (always required for core functionality)
         require_once PAUSATF_RESULTS_DIR . 'includes/parsers/interface-parser.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/parsers/class-parser-detector.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/parsers/class-parser-table.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/parsers/class-parser-pre.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/parsers/class-parser-word.php';
 
-        // Load USATF rules engine
-        require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-rules-engine.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-age-divisions.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-record-categories.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-competition-rules.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-championship-rules.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-event-standards.php';
+        // Load USATF rules engine (conditionally)
+        if (FeatureManager::is_enabled('usatf_rules_engine')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-rules-engine.php';
+            require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-age-divisions.php';
+            require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-record-categories.php';
+            require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-competition-rules.php';
+            require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-championship-rules.php';
+            require_once PAUSATF_RESULTS_DIR . 'includes/rules/class-usatf-event-standards.php';
+        }
 
-        // Load core classes
+        // Load core classes (always required)
         require_once PAUSATF_RESULTS_DIR . 'includes/class-results-importer.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-athlete-database.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-performance-tracker.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-club-manager.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-csv-importer.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-data-exporter.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-athlete-claim.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-records-database.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-ranking-system.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-athlete-dashboard.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-certificates.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-grand-prix.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-race-director-portal.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-graphql-api.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/class-webhooks.php';
 
-        // Load integrations
-        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-hytek-importer.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-runsignup-integration.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-athlinks-integration.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-usatf-verification.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-timing-systems.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-strava-sync.php';
-        require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-ultrasignup-import.php';
+        // Load optional core features
+        if (FeatureManager::is_enabled('performance_tracker')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-performance-tracker.php';
+        }
 
-        // Admin
+        if (FeatureManager::is_enabled('club_manager')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-club-manager.php';
+        }
+
+        if (FeatureManager::is_enabled('csv_importer')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-csv-importer.php';
+        }
+
+        if (FeatureManager::is_enabled('data_exporter')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-data-exporter.php';
+        }
+
+        if (FeatureManager::is_enabled('athlete_claim')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-athlete-claim.php';
+        }
+
+        if (FeatureManager::is_enabled('records_database')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-records-database.php';
+        }
+
+        if (FeatureManager::is_enabled('ranking_system')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-ranking-system.php';
+        }
+
+        if (FeatureManager::is_enabled('athlete_dashboard')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-athlete-dashboard.php';
+        }
+
+        if (FeatureManager::is_enabled('certificates')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-certificates.php';
+        }
+
+        if (FeatureManager::is_enabled('grand_prix')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-grand-prix.php';
+        }
+
+        if (FeatureManager::is_enabled('race_director_portal')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-race-director-portal.php';
+        }
+
+        if (FeatureManager::is_enabled('graphql_api')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-graphql-api.php';
+        }
+
+        if (FeatureManager::is_enabled('webhooks')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-webhooks.php';
+        }
+
+        // Load integrations (conditionally)
+        if (FeatureManager::is_enabled('hytek_importer')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-hytek-importer.php';
+        }
+
+        if (FeatureManager::is_enabled('runsignup_integration')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-runsignup-integration.php';
+        }
+
+        if (FeatureManager::is_enabled('athlinks_integration')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-athlinks-integration.php';
+        }
+
+        if (FeatureManager::is_enabled('usatf_verification')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-usatf-verification.php';
+        }
+
+        if (FeatureManager::is_enabled('timing_systems')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-timing-systems.php';
+        }
+
+        if (FeatureManager::is_enabled('strava_sync')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-strava-sync.php';
+        }
+
+        if (FeatureManager::is_enabled('ultrasignup_import')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-ultrasignup-import.php';
+        }
+
+        // Admin (always load for settings management)
         if (is_admin()) {
             require_once PAUSATF_RESULTS_DIR . 'admin/class-admin-settings.php';
             require_once PAUSATF_RESULTS_DIR . 'admin/class-admin-import.php';
@@ -278,7 +365,11 @@ final class Plugin {
 
         // Public
         require_once PAUSATF_RESULTS_DIR . 'public/class-shortcodes.php';
-        require_once PAUSATF_RESULTS_DIR . 'public/class-rest-api.php';
+
+        if (FeatureManager::is_enabled('rest_api')) {
+            require_once PAUSATF_RESULTS_DIR . 'public/class-rest-api.php';
+        }
+
         require_once PAUSATF_RESULTS_DIR . 'public/class-frontend-display.php';
 
         // Cron
