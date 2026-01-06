@@ -1,0 +1,17 @@
+actor: ApiTester
+
+modules:
+    enabled:
+        - REST:
+            url: '%WP_URL%'
+            depends: PhpBrowser
+            shortDebugResponse: 300
+        - Db:
+            dsn: 'mysql:host=%DB_HOST%;dbname=%DB_NAME%'
+            user: '%DB_USER%'
+            password: '%DB_PASSWORD%'
+        - Asserts
+        - \Helper\Api
+
+step_decorators:
+    - Codeception\Step\Retry

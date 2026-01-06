@@ -1,0 +1,29 @@
+actor: AcceptanceTester
+
+modules:
+    enabled:
+        - WebDriver:
+            url: '%WP_URL%'
+            browser: chrome
+            host: chrome
+            port: 4444
+            window_size: 1920x1080
+            capabilities:
+                browserName: 'chrome'
+                goog:chromeOptions:
+                    args:
+                        - '--headless'
+                        - '--disable-gpu'
+                        - '--no-sandbox'
+                        - '--disable-dev-shm-usage'
+        - Db:
+            dsn: 'mysql:host=%DB_HOST%;dbname=%DB_NAME%'
+            user: '%DB_USER%'
+            password: '%DB_PASSWORD%'
+            dump: tests/_data/dump.sql
+            populate: true
+            cleanup: true
+        - \Helper\Acceptance
+
+step_decorators:
+    - Codeception\Step\Retry

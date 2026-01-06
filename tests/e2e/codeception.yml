@@ -1,0 +1,27 @@
+actor_suffix: Tester
+
+paths:
+    tests: tests
+    output: tests/_output
+    data: tests/_data
+    support: tests/_support
+
+settings:
+    bootstrap: _bootstrap.php
+    memory_limit: 1024M
+    colors: true
+
+extensions:
+    enabled:
+        - Codeception\Extension\RunFailed
+
+params:
+    - env
+
+coverage:
+    enabled: true
+    include:
+        - plugin/*
+
+groups:
+    slow: tests/_slow

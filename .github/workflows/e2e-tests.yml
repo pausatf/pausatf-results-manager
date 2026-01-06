@@ -1,0 +1,194 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  WP_URL: http://localhost:8080
+  WP_ADMIN_USERNAME: admin
+  WP_ADMIN_PASSWORD: admin
+  DB_HOST: 127.0.0.1
+  DB_NAME: wordpress_test
+  DB_USER: root
+  DB_PASSWORD: root
+
+jobs:
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, intl, pdo_mysql, zip, gd
+          coverage: none
+          tools: composer, wp-cli
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@latest
+
+      - name: Install ChromeDriver
+        uses: nanasess/setup-chromedriver@v2
+
+      - name: Start ChromeDriver
+        run: |
+          chromedriver --port=4444 &
+          sleep 3
+
+      - name: Download WordPress
+        run: |
+          mkdir -p /tmp/wordpress
+          cd /tmp/wordpress
+          wp core download --version=6.4
+          wp config create \
+            --dbname=$DB_NAME \
+            --dbuser=$DB_USER \
+            --dbpass=$DB_PASSWORD \
+            --dbhost=$DB_HOST \
+            --skip-check
+          wp core install \
+            --url=$WP_URL \
+            --title="PAUSATF Test" \
+            --admin_user=$WP_ADMIN_USERNAME \
+            --admin_password=$WP_ADMIN_PASSWORD \
+            --admin_email=admin@test.com \
+            --skip-email
+
+      - name: Install plugin
+        run: |
+          cp -r $GITHUB_WORKSPACE /tmp/wordpress/wp-content/plugins/pausatf-results-manager
+          cd /tmp/wordpress
+          wp plugin activate pausatf-results-manager
+
+      - name: Start WordPress server
+        run: |
+          cd /tmp/wordpress
+          php -S 0.0.0.0:8080 &
+          sleep 5
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: tests/e2e/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('tests/e2e/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install test dependencies
+        working-directory: tests/e2e
+        run: composer install --prefer-dist --no-progress
+
+      - name: Generate Codeception support files
+        working-directory: tests/e2e
+        run: vendor/bin/codecept build
+
+      - name: Run API tests
+        working-directory: tests/e2e
+        run: |
+          vendor/bin/codecept run api --steps --no-colors
+        env:
+          WP_URL: http://localhost:8080
+          DB_HOST: 127.0.0.1
+
+      - name: Run acceptance tests
+        working-directory: tests/e2e
+        run: |
+          vendor/bin/codecept run acceptance --steps --no-colors
+        env:
+          WP_URL: http://localhost:8080
+          DB_HOST: 127.0.0.1
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-test-output
+          path: |
+            tests/e2e/tests/_output/
+            /tmp/wordpress/wp-content/debug.log
+          retention-days: 7
+
+  docker-e2e-tests:
+    name: Docker E2E Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test runner image
+        run: |
+          docker compose -f docker-compose.yml build test-runner
+
+      - name: Start services
+        run: |
+          docker compose -f docker-compose.yml up -d wordpress db chrome
+          sleep 30
+
+      - name: Setup WordPress
+        run: |
+          docker compose -f docker-compose.yml run --rm wp-cli bash -c "
+            until mysql -hdb -uwordpress -pwordpress -e 'SELECT 1' &>/dev/null; do sleep 2; done
+            wp core install \
+              --url=http://wordpress \
+              --title='PAUSATF Test' \
+              --admin_user=admin \
+              --admin_password=admin \
+              --admin_email=admin@test.com \
+              --skip-email \
+              --allow-root
+            wp plugin activate pausatf-results-manager --allow-root
+          "
+
+      - name: Run E2E tests
+        run: |
+          docker compose -f docker-compose.yml run --rm test-runner
+
+      - name: Capture logs on failure
+        if: failure()
+        run: |
+          docker compose -f docker-compose.yml logs > docker-logs.txt
+
+      - name: Upload Docker logs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: docker-e2e-logs
+          path: docker-logs.txt
+          retention-days: 7
+
+      - name: Stop services
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml down -v

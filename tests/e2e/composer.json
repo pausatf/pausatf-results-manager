@@ -1,0 +1,33 @@
+{
+    "name": "pausatf/results-manager-tests",
+    "description": "E2E tests for PAUSATF Results Manager WordPress plugin",
+    "type": "project",
+    "license": "GPL-2.0-or-later",
+    "require-dev": {
+        "codeception/codeception": "^5.0",
+        "codeception/module-webdriver": "^3.2",
+        "codeception/module-db": "^3.1",
+        "codeception/module-asserts": "^3.0",
+        "codeception/module-rest": "^3.3",
+        "codeception/module-phpbrowser": "^3.0",
+        "lucatume/wp-browser": "^3.5",
+        "guzzlehttp/guzzle": "^7.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "codeception/c3": true
+        }
+    },
+    "scripts": {
+        "test": "codecept run",
+        "test:acceptance": "codecept run acceptance",
+        "test:functional": "codecept run functional",
+        "test:integration": "codecept run integration",
+        "test:api": "codecept run api"
+    }
+}
