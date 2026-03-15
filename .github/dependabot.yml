@@ -1,5 +1,7 @@
 version: 2
 updates:
+  # JavaScript files in this plugin are static assets and there are currently no npm/yarn/pnpm manifests.
+  # Add an npm ecosystem block when package manager manifests are added to the repository.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

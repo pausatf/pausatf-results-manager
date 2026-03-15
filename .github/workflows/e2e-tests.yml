@@ -72,22 +72,22 @@ jobs:
           cd /tmp/wordpress
           wp core download --version=6.4
           wp config create \
-            --dbname=$DB_NAME \
-            --dbuser=$DB_USER \
-            --dbpass=$DB_PASSWORD \
-            --dbhost=$DB_HOST \
+            --dbname="$DB_NAME" \
+            --dbuser="$DB_USER" \
+            --dbpass="$DB_PASSWORD" \
+            --dbhost="$DB_HOST" \
             --skip-check
           wp core install \
-            --url=$WP_URL \
+            --url="$WP_URL" \
             --title="PAUSATF Test" \
-            --admin_user=$WP_ADMIN_USERNAME \
-            --admin_password=$WP_ADMIN_PASSWORD \
+            --admin_user="$WP_ADMIN_USERNAME" \
+            --admin_password="$WP_ADMIN_PASSWORD" \
             --admin_email=admin@test.com \
             --skip-email
 
       - name: Install plugin
         run: |
-          cp -r $GITHUB_WORKSPACE /tmp/wordpress/wp-content/plugins/pausatf-results-manager
+          cp -r "$GITHUB_WORKSPACE" /tmp/wordpress/wp-content/plugins/pausatf-results-manager
           cd /tmp/wordpress
           wp plugin activate pausatf-results-manager
 
