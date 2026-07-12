@@ -298,6 +298,12 @@ class Certificates {
             return false;
         }
 
+        // Reuse a cached card if present, mirroring generate_certificate.
+        $cached = $this->cached_path($this->artifact_filename('share-card', $result_id, $platform, 'png'));
+        if ($cached !== null) {
+            return $cached;
+        }
+
         // Get dimensions for platform (get_platform_dimensions allowlists via match)
         $dimensions = $this->get_platform_dimensions($platform);
 
@@ -609,7 +615,11 @@ class Certificates {
      * Keeps enumeration cheap: repeat requests never re-run PDF/image builds.
      */
     private function cached_path(string $filename): ?string {
-        $dir = wp_upload_dir()['basedir'] . '/pausatf-certificates/';
+        $base = wp_upload_dir()['basedir'];
+        // Route to the directory the artifact is actually written to.
+        $dir = str_starts_with($filename, 'share-card-')
+            ? $base . '/pausatf-share-cards/'
+            : $base . '/pausatf-certificates/';
         foreach ([$filename, str_replace('.pdf', '.html', $filename)] as $candidate) {
             $path = $dir . basename($candidate);
             if (is_file($path)) {
