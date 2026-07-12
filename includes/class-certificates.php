@@ -49,20 +49,10 @@ class Certificates {
      * @return string|false PDF file path or false
      */
     public function generate_certificate(int $result_id, string $template = 'finisher'): string|false {
-        global $wpdb;
-        $table = $wpdb->prefix . 'pausatf_results';
-
         // Only published events yield certificates; never leak results for
         // draft/private/pending events via enumerable result_id.
-        $result = $wpdb->get_row($wpdb->prepare(
-            "SELECT r.*, p.post_title as event_name
-             FROM {$table} r
-             INNER JOIN {$wpdb->posts} p ON r.event_id = p.ID
-             WHERE r.id = %d AND p.post_status = 'publish'",
-            $result_id
-        ), ARRAY_A);
-
-        if (!$result) {
+        $result = $this->load_result($result_id);
+        if (!$result || $result['event_status'] !== 'publish') {
             return false;
         }
 
@@ -72,7 +62,7 @@ class Certificates {
             $template = 'finisher';
         }
 
-        $version = (string) ($result['updated_at'] ?? '');
+        $version = $this->row_version($result);
         $filename = $this->artifact_filename('certificate', $result_id, $template, $version, 'pdf');
 
         // Serve a cached file if one exists: enumeration cannot force repeated
@@ -284,22 +274,12 @@ class Certificates {
      * @return string|false Image path or false
      */
     public function generate_share_card(int $result_id, string $platform = 'instagram'): string|false {
-        global $wpdb;
-        $table = $wpdb->prefix . 'pausatf_results';
-
-        $result = $wpdb->get_row($wpdb->prepare(
-            "SELECT r.*, p.post_title as event_name
-             FROM {$table} r
-             INNER JOIN {$wpdb->posts} p ON r.event_id = p.ID
-             WHERE r.id = %d AND p.post_status = 'publish'",
-            $result_id
-        ), ARRAY_A);
-
-        if (!$result) {
+        $result = $this->load_result($result_id);
+        if (!$result || $result['event_status'] !== 'publish') {
             return false;
         }
 
-        $version = (string) ($result['updated_at'] ?? '');
+        $version = $this->row_version($result);
 
         // Reuse a cached card if present, mirroring generate_certificate.
         $cached = $this->cached_path($this->artifact_filename('share-card', $result_id, $platform, $version, 'png'));
@@ -522,6 +502,10 @@ class Certificates {
             $wp_filesystem->put_contents($dir . 'web.config', "<?xml version=\"1.0\"?>\n<configuration><system.webServer><authorization><deny users=\"*\" /></authorization></system.webServer></configuration>\n", FS_CHMOD_FILE);
             $wp_filesystem->put_contents($dir . 'index.php', "<?php // Silence is golden.\n", FS_CHMOD_FILE);
         }
+        // Fail closed if the Apache deny guard is not actually in place.
+        if (!file_exists($dir . '.htaccess')) {
+            return false;
+        }
         // Unpredictable HMAC filenames are the primary defense; on nginx the
         // deny files are inert, so document the server block in a README.
         if (!file_exists($dir . 'nginx.conf.example')) {
@@ -617,19 +601,28 @@ class Certificates {
     }
 
     /**
-     * Publish status + cache version for a result, or null if it does not exist.
-     * One query drives both the publish gate and the versioned filename.
+     * Load a result row joined to its event, or null. The single authoritative
+     * loader so the publish gate and the cache version always agree.
      */
-    private function result_meta(int $result_id): ?array {
+    private function load_result(int $result_id): ?array {
         global $wpdb;
         $table = $wpdb->prefix . 'pausatf_results';
         $row = $wpdb->get_row($wpdb->prepare(
-            "SELECT p.post_status AS status, r.updated_at AS version
+            "SELECT r.*, p.post_status AS event_status, p.post_title AS event_name
              FROM {$table} r INNER JOIN {$wpdb->posts} p ON r.event_id = p.ID
              WHERE r.id = %d",
             $result_id
         ), ARRAY_A);
         return $row ?: null;
+    }
+
+    /**
+     * Content-hash cache version: schema-independent, so any correction to the
+     * result (or event) yields a new filename and orphans the stale artifact.
+     * Both the handler pre-check and the generators derive it from the same row.
+     */
+    private function row_version(array $row): string {
+        return substr(md5((string) wp_json_encode($row)), 0, 16);
     }
 
     /**
@@ -718,12 +711,13 @@ class Certificates {
         if (!isset(self::TEMPLATES[$template])) {
             $template = 'finisher';
         }
-        $meta = $this->result_meta($result_id);
-        if (!$result_id || !$meta || $meta['status'] !== 'publish') {
+        $result = $result_id ? $this->load_result($result_id) : null;
+        if (!$result || $result['event_status'] !== 'publish') {
             wp_die('Not found', '', ['response' => 404]);
         }
+        $version = $this->row_version($result);
 
-        $cached = $this->cached_path($this->artifact_filename('certificate', $result_id, $template, (string) $meta['version'], 'pdf'));
+        $cached = $this->cached_path($this->artifact_filename('certificate', $result_id, $template, $version, 'pdf'));
         if ($cached === null && !$this->generation_allowed()) {
             wp_die('Too many requests. Please try again shortly.', '', ['response' => 429]);
         }
@@ -745,13 +739,14 @@ class Certificates {
         if (!in_array($platform, $known, true)) {
             $platform = 'instagram';
         }
-        $meta = $this->result_meta($result_id);
-        if (!$result_id || !$meta || $meta['status'] !== 'publish') {
+        $result = $result_id ? $this->load_result($result_id) : null;
+        if (!$result || $result['event_status'] !== 'publish') {
             wp_die('Not found', '', ['response' => 404]);
         }
+        $version = $this->row_version($result);
 
         // Serve the cached card if present; only rate-limit real generation.
-        $cached = $this->cached_path($this->artifact_filename('share-card', $result_id, $platform, (string) $meta['version'], 'png'));
+        $cached = $this->cached_path($this->artifact_filename('share-card', $result_id, $platform, $version, 'png'));
         if ($cached === null && !$this->generation_allowed()) {
             wp_die('Too many requests. Please try again shortly.', '', ['response' => 429]);
         }
