@@ -147,8 +147,8 @@ $tabs = [
                         ?>
                             <div class="pausatf-feature-card <?php echo $is_enabled ? 'enabled' : 'disabled'; ?> <?php echo !$is_toggleable ? 'core' : ''; ?>"
                                  data-feature="<?php echo esc_attr($feature_id); ?>"
-                                 data-dependencies="<?php echo esc_attr(json_encode($dependencies)); ?>"
-                                 data-dependents="<?php echo esc_attr(json_encode($dependents)); ?>"
+                                 data-dependencies="<?php echo esc_attr((string) json_encode($dependencies)); ?>"
+                                 data-dependents="<?php echo esc_attr((string) json_encode($dependents)); ?>"
                                  data-default="<?php echo $feature['default'] ? '1' : '0'; ?>">
 
                                 <div class="pausatf-feature-header">

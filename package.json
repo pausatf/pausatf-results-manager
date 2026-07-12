@@ -1,0 +1,46 @@
+{
+    "name": "@pausatf/results-manager",
+    "version": "3.0.0",
+    "description": "PA USATF Results Manager WordPress plugin for race results and athlete tracking",
+    "author": "PA USATF",
+    "license": "GPL-2.0-or-later",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "wp-scripts build",
+        "start": "wp-scripts start",
+        "lint:js": "wp-scripts lint-js ./assets/js",
+        "lint:css": "wp-scripts lint-style ./assets/css",
+        "lint": "npm run lint:js && npm run lint:css",
+        "format": "wp-scripts format ./assets/js",
+        "test:unit": "wp-scripts test-unit-js",
+        "sbom": "cyclonedx-npm --output-format JSON --output-file sbom.npm.cdx.json",
+        "sbom:xml": "cyclonedx-npm --output-format XML --output-file sbom.npm.cdx.xml",
+        "security:audit": "npm audit --json > security-audit.npm.json || true",
+        "security:check": "npm run security:audit && npm run sbom"
+    },
+    "devDependencies": {
+        "@cyclonedx/cyclonedx-npm": "^1.19.0",
+        "@wordpress/scripts": "^28.0.0",
+        "@wordpress/eslint-plugin": "^19.0.0",
+        "eslint": "^8.57.0",
+        "prettier": "^3.3.0"
+    },
+    "engines": {
+        "node": ">=20.0.0",
+        "npm": ">=10.0.0"
+    },
+    "browserslist": [
+        "defaults",
+        "not IE 11"
+    ],
+    "files": [
+        "assets/",
+        "includes/",
+        "admin/",
+        "public/",
+        "languages/",
+        "pausatf-results.php",
+        "readme.txt"
+    ]
+}

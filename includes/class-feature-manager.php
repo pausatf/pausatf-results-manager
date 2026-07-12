@@ -330,6 +330,27 @@ class FeatureManager {
             ],
             'endpoints' => ['/rdf/', '/sparql'],
         ]);
+
+        // Event Sanctions Management
+        self::register_feature('sanctions_manager', [
+            'name' => __('Event Sanctions Manager', 'pausatf-results'),
+            'description' => __('Manage USATF event sanction applications, approvals, fees, and post-event reporting.', 'pausatf-results'),
+            'category' => 'race_director',
+            'default' => false,
+            'toggleable' => true,
+            'icon' => 'dashicons-shield',
+            'files' => [
+                'includes/class-sanctions-manager.php',
+                'includes/sanctions/class-sanction.php',
+                'includes/sanctions/class-sanction-query.php',
+                'includes/sanctions/class-sanction-fees.php',
+                'includes/sanctions/class-sanction-workflow.php',
+                'includes/sanctions/class-sanction-notifications.php',
+            ],
+            'has_tables' => true,
+            'shortcodes' => ['pausatf_sanction_form', 'pausatf_my_sanctions', 'pausatf_sanctioned_events'],
+            'capabilities' => ['manage_sanctions', 'review_sanctions', 'submit_sanctions'],
+        ]);
     }
 
     /**

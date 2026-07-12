@@ -1,0 +1,430 @@
+/**
+ * Public Sanctions Styles
+ *
+ * @package PAUSATF\Results\Sanctions
+ */
+
+/* Form Wrapper */
+.pausatf-sanction-form-wrap {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.pausatf-sanction-form-wrap h2 {
+    margin-bottom: 10px;
+}
+
+.pausatf-sanction-form-wrap .form-intro {
+    color: #666;
+    margin-bottom: 25px;
+}
+
+/* Notices */
+.pausatf-notice {
+    padding: 15px 20px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.pausatf-success {
+    background-color: #d1e7dd;
+    color: #0a3622;
+    border: 1px solid #badbcc;
+}
+
+.pausatf-error {
+    background-color: #f8d7da;
+    color: #58151c;
+    border: 1px solid #f5c2c7;
+}
+
+/* Form Styles */
+.pausatf-sanction-form fieldset {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px 25px;
+    margin-bottom: 25px;
+}
+
+.pausatf-sanction-form legend {
+    font-weight: 600;
+    font-size: 1.1em;
+    padding: 0 10px;
+}
+
+.pausatf-sanction-form .form-row {
+    margin-bottom: 20px;
+}
+
+.pausatf-sanction-form .form-row:last-child {
+    margin-bottom: 0;
+}
+
+.pausatf-sanction-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.pausatf-sanction-form .required {
+    color: #d63638;
+}
+
+.pausatf-sanction-form input[type="text"],
+.pausatf-sanction-form input[type="email"],
+.pausatf-sanction-form input[type="tel"],
+.pausatf-sanction-form input[type="number"],
+.pausatf-sanction-form input[type="date"],
+.pausatf-sanction-form select,
+.pausatf-sanction-form textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.pausatf-sanction-form input:focus,
+.pausatf-sanction-form select:focus,
+.pausatf-sanction-form textarea:focus {
+    border-color: #2271b1;
+    outline: none;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+.pausatf-sanction-form input[readonly] {
+    background-color: #f0f0f1;
+    cursor: not-allowed;
+}
+
+/* Multi-column rows */
+.pausatf-sanction-form .form-row-double {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.pausatf-sanction-form .form-row-triple {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 600px) {
+    .pausatf-sanction-form .form-row-double,
+    .pausatf-sanction-form .form-row-triple {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Checkbox rows */
+.pausatf-sanction-form .checkbox-row label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.pausatf-sanction-form .checkbox-row input[type="checkbox"] {
+    width: auto;
+    margin-top: 3px;
+}
+
+/* Field descriptions */
+.pausatf-sanction-form .field-description {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.pausatf-sanction-form .field-description a {
+    color: #2271b1;
+}
+
+/* Input with prefix */
+.input-with-prefix {
+    display: flex;
+    align-items: center;
+}
+
+.input-with-prefix .input-prefix {
+    background: #f0f0f1;
+    border: 1px solid #ccc;
+    border-right: none;
+    border-radius: 4px 0 0 4px;
+    padding: 10px 12px;
+    color: #666;
+}
+
+.input-with-prefix input {
+    border-radius: 0 4px 4px 0 !important;
+}
+
+/* Fee Estimate Section */
+.fee-estimate-section {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px 25px;
+    margin-bottom: 25px;
+}
+
+.fee-estimate-section h3 {
+    margin: 0 0 15px;
+    font-size: 1.1em;
+}
+
+.fee-estimate {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+}
+
+.fee-estimate .fee-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.fee-estimate .fee-row:last-of-type {
+    border-bottom: none;
+}
+
+.fee-estimate .fee-total {
+    font-weight: bold;
+    font-size: 1.1em;
+    border-top: 2px solid #ddd;
+    margin-top: 10px;
+    padding-top: 15px;
+}
+
+.fee-estimate .fee-late {
+    color: #d63638;
+}
+
+.fee-estimate .fee-tier {
+    text-align: center;
+    color: #666;
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+.fee-note {
+    font-size: 12px;
+    color: #666;
+    margin-top: 15px;
+}
+
+.fee-note a {
+    color: #2271b1;
+}
+
+/* Agreement Section */
+.agreement-section {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 4px;
+    padding: 15px 20px;
+    margin-bottom: 25px;
+}
+
+.agreement-section label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.agreement-section input[type="checkbox"] {
+    margin-top: 3px;
+}
+
+.agreement-section a {
+    color: #2271b1;
+}
+
+/* Form Actions */
+.form-actions {
+    text-align: center;
+}
+
+.pausatf-sanction-form button[type="submit"] {
+    padding: 12px 40px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* My Sanctions */
+.pausatf-my-sanctions h2 {
+    margin-bottom: 20px;
+}
+
+.sanction-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.sanction-status-draft { background: #e2e3e5; color: #41464b; }
+.sanction-status-submitted { background: #cfe2ff; color: #084298; }
+.sanction-status-under_review { background: #fff3cd; color: #664d03; }
+.sanction-status-approved { background: #d1e7dd; color: #0a3622; }
+.sanction-status-rejected { background: #f8d7da; color: #58151c; }
+.sanction-status-cancelled { background: #d3d3d4; color: #41464b; }
+
+.report-needed {
+    color: #d63638;
+    font-weight: 500;
+}
+
+.na {
+    color: #999;
+}
+
+/* Sanctioned Events */
+.pausatf-sanctioned-events h2 {
+    margin-bottom: 20px;
+}
+
+.pausatf-events-table .event-date {
+    text-align: center;
+    width: 60px;
+}
+
+.pausatf-events-table .event-date .month {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #666;
+}
+
+.pausatf-events-table .event-date .day {
+    display: block;
+    font-size: 20px;
+    font-weight: bold;
+    color: #2271b1;
+}
+
+.event-type {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    background: #e2e3e5;
+    color: #41464b;
+}
+
+.event-type-road { background: #cce5ff; color: #004085; }
+.event-type-track { background: #d4edda; color: #155724; }
+.event-type-xc { background: #f5c6cb; color: #721c24; }
+.event-type-trail { background: #ffeeba; color: #856404; }
+.event-type-racewalk { background: #d6d8db; color: #383d41; }
+.event-type-multi { background: #e2d5f1; color: #5a3d7a; }
+
+.certified-badge {
+    display: inline-flex;
+    align-items: center;
+    color: #00a32a;
+    margin-left: 5px;
+}
+
+.certified-badge .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+}
+
+/* Tables */
+.pausatf-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.pausatf-table th,
+.pausatf-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.pausatf-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+.pausatf-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.pausatf-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.pausatf-table code {
+    background: #f0f0f1;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+/* Login Required */
+.pausatf-login-required {
+    text-align: center;
+    padding: 40px 20px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.pausatf-login-required p:first-child {
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.pausatf-login-required .button {
+    display: inline-block;
+    padding: 10px 20px;
+    margin: 0 5px;
+    background: #2271b1;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.pausatf-login-required .button:hover {
+    background: #135e96;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .pausatf-sanction-form fieldset {
+        padding: 15px;
+    }
+
+    .pausatf-table {
+        font-size: 14px;
+    }
+
+    .pausatf-table th,
+    .pausatf-table td {
+        padding: 10px;
+    }
+
+    .pausatf-events-table .event-date {
+        width: 50px;
+    }
+
+    .pausatf-events-table .event-date .day {
+        font-size: 16px;
+    }
+}

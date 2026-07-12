@@ -59,7 +59,7 @@ class AthleteDashboard {
     public function render_dashboard(array $atts = []): string {
         if (!is_user_logged_in()) {
             return '<div class="pausatf-login-prompt">
-                <p>Please <a href="' . wp_login_url(get_permalink()) . '">log in</a> to view your athlete dashboard.</p>
+                <p>Please <a href="' . wp_login_url(get_permalink() ?: '') . '">log in</a> to view your athlete dashboard.</p>
             </div>';
         }
 

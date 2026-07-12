@@ -107,6 +107,12 @@ final class Plugin {
             }
         }
 
+        // Create sanctions tables if enabled
+        if (FeatureManager::is_enabled('sanctions_manager')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-sanctions-manager.php';
+            SanctionsManager::create_tables();
+        }
+
         // Schedule sync cron
         if (!wp_next_scheduled('pausatf_results_sync')) {
             wp_schedule_event(time(), 'daily', 'pausatf_results_sync');
@@ -333,6 +339,14 @@ final class Plugin {
             require_once PAUSATF_RESULTS_DIR . 'includes/class-sparql-endpoint.php';
         }
 
+        // Load sanctions manager (conditionally)
+        if (FeatureManager::is_enabled('sanctions_manager')) {
+            require_once PAUSATF_RESULTS_DIR . 'includes/class-sanctions-manager.php';
+            require_once PAUSATF_RESULTS_DIR . 'includes/sanctions/class-sanction-fees.php';
+            require_once PAUSATF_RESULTS_DIR . 'includes/sanctions/class-sanction-notifications.php';
+            SanctionsManager::instance();
+        }
+
         // Load integrations (conditionally)
         if (FeatureManager::is_enabled('hytek_importer')) {
             require_once PAUSATF_RESULTS_DIR . 'includes/integrations/class-hytek-importer.php';
@@ -376,6 +390,11 @@ final class Plugin {
         }
 
         require_once PAUSATF_RESULTS_DIR . 'public/class-frontend-display.php';
+
+        // Load public sanctions forms and views
+        if (FeatureManager::is_enabled('sanctions_manager')) {
+            require_once PAUSATF_RESULTS_DIR . 'public/class-sanctions-public.php';
+        }
 
         // Cron
         require_once PAUSATF_RESULTS_DIR . 'cron/class-sync-scheduler.php';
@@ -421,6 +440,18 @@ final class Plugin {
                 [$this, 'render_semantic_page']
             );
         }
+
+        // Conditionally add Sanctions page
+        if (FeatureManager::is_enabled('sanctions_manager')) {
+            add_submenu_page(
+                'pausatf-results',
+                __('Event Sanctions', 'pausatf-results'),
+                __('Sanctions', 'pausatf-results'),
+                'manage_options',
+                'pausatf-sanctions',
+                [$this, 'render_sanctions_page']
+            );
+        }
     }
 
     public function admin_assets(string $hook): void {
@@ -463,6 +494,26 @@ final class Plugin {
 
     public function render_semantic_page(): void {
         include PAUSATF_RESULTS_DIR . 'admin/views/semantic-web.php';
+    }
+
+    public function render_sanctions_page(): void {
+        $action = isset($_GET['action']) ? sanitize_text_field($_GET['action']) : 'list';
+
+        switch ($action) {
+            case 'new':
+            case 'edit':
+                include PAUSATF_RESULTS_DIR . 'admin/views/sanctions/sanction-edit.php';
+                break;
+            case 'view':
+                include PAUSATF_RESULTS_DIR . 'admin/views/sanctions/sanction-edit.php';
+                break;
+            case 'review':
+                include PAUSATF_RESULTS_DIR . 'admin/views/sanctions/sanction-review.php';
+                break;
+            default:
+                include PAUSATF_RESULTS_DIR . 'admin/views/sanctions/sanctions-list.php';
+                break;
+        }
     }
 }
 

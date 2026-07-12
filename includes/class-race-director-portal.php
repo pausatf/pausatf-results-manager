@@ -399,7 +399,7 @@ class RaceDirectorPortal {
     private function render_login_prompt(): string {
         return '<div class="pausatf-login-required">
             <h2>Race Director Portal</h2>
-            <p>Please <a href="' . wp_login_url(get_permalink()) . '">log in</a> to access the Race Director Portal.</p>
+            <p>Please <a href="' . wp_login_url(get_permalink() ?: '') . '">log in</a> to access the Race Director Portal.</p>
         </div>';
     }
 

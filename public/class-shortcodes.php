@@ -36,6 +36,9 @@ class Shortcodes {
      *
      * [pausatf_results event_id="123"]
      * [pausatf_results year="2024" type="xc"]
+     *
+     * @param array<string, mixed> $atts Shortcode attributes.
+     * @return string Rendered HTML.
      */
     public function render_results(array $atts): string {
         $atts = shortcode_atts([
@@ -51,7 +54,7 @@ class Shortcodes {
 
         if ($atts['event_id']) {
             // Single event results
-            $event = get_post($atts['event_id']);
+            $event = get_post((int) $atts['event_id']);
             if (!$event || $event->post_type !== 'pausatf_event') {
                 return '<p>' . esc_html__('Event not found.', 'pausatf-results') . '</p>';
             }
@@ -104,6 +107,9 @@ class Shortcodes {
      *
      * [pausatf_athlete name="John Smith"]
      * [pausatf_athlete id="123"]
+     *
+     * @param array<string, mixed> $atts Shortcode attributes.
+     * @return string Rendered HTML.
      */
     public function render_athlete(array $atts): string {
         $atts = shortcode_atts([
@@ -114,7 +120,7 @@ class Shortcodes {
         $athlete_db = new AthleteDatabase();
 
         if ($atts['id']) {
-            $athlete = get_post($atts['id']);
+            $athlete = get_post((int) $atts['id']);
             $name = $athlete ? $athlete->post_title : '';
         } else {
             $name = $atts['name'];
@@ -124,7 +130,7 @@ class Shortcodes {
             return '<p>' . esc_html__('Athlete not found.', 'pausatf-results') . '</p>';
         }
 
-        $results = $athlete_db->get_athlete_results($name, $atts['id'] ?: null);
+        $results = $athlete_db->get_athlete_results($name, $atts['id'] ? (int) $atts['id'] : null);
         $stats = $athlete_db->get_athlete_stats($name);
 
         ob_start();
@@ -155,13 +161,16 @@ class Shortcodes {
             <?php echo $this->render_results_table($results); ?>
         </div>
         <?php
-        return ob_get_clean();
+        return ob_get_clean() ?: '';
     }
 
     /**
      * Render leaderboard
      *
      * [pausatf_leaderboard division="Open" year="2024"]
+     *
+     * @param array<string, mixed> $atts Shortcode attributes.
+     * @return string Rendered HTML.
      */
     public function render_leaderboard(array $atts): string {
         $atts = shortcode_atts([
@@ -174,7 +183,7 @@ class Shortcodes {
         $leaders = $athlete_db->get_leaderboard(
             $atts['division'] ?: null,
             $atts['year'] ?: null,
-            $atts['limit']
+            (int) $atts['limit']
         );
 
         if (empty($leaders)) {
@@ -208,13 +217,16 @@ class Shortcodes {
             </table>
         </div>
         <?php
-        return ob_get_clean();
+        return ob_get_clean() ?: '';
     }
 
     /**
      * Render athlete search form
      *
      * [pausatf_search]
+     *
+     * @param array<string, mixed> $atts Shortcode attributes.
+     * @return string Rendered HTML.
      */
     public function render_search(array $atts): string {
         ob_start();
@@ -251,11 +263,15 @@ class Shortcodes {
             ?>
         </div>
         <?php
-        return ob_get_clean();
+        return ob_get_clean() ?: '';
     }
 
     /**
      * Render results table HTML
+     *
+     * @param array<int, array<string, mixed>> $results Result rows.
+     * @param string $title Optional table title.
+     * @return string Rendered HTML.
      */
     private function render_results_table(array $results, string $title = ''): string {
         if (empty($results)) {
@@ -295,7 +311,7 @@ class Shortcodes {
             </table>
         </div>
         <?php
-        return ob_get_clean();
+        return ob_get_clean() ?: '';
     }
 }
 

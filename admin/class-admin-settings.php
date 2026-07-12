@@ -37,17 +37,15 @@ class AdminSettings {
     /**
      * Verify AJAX nonce
      *
-     * @return bool
+     * @return true
      */
-    private static function verify_nonce(): bool {
+    private static function verify_nonce(): true {
         if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'pausatf_ajax')) {
             wp_send_json_error(__('Security check failed.', 'pausatf-results'));
-            return false;
         }
 
         if (!current_user_can('manage_options')) {
             wp_send_json_error(__('Permission denied.', 'pausatf-results'));
-            return false;
         }
 
         return true;
@@ -151,11 +149,11 @@ class AdminSettings {
 
         if (!FeatureManager::is_enabled('records_database')) {
             wp_send_json_error(__('Records Database feature is not enabled.', 'pausatf-results'));
-            return;
         }
 
         if (class_exists('PAUSATF\\Results\\RecordsDatabase')) {
-            $records = \PAUSATF\Results\RecordsDatabase::scan_for_records();
+            $records_db = new \PAUSATF\Results\RecordsDatabase();
+            $records = $records_db->scan_for_records((int) date('Y'));
             wp_send_json_success([
                 'message' => sprintf(
                     __('Found %d potential new records. Review them in the Records section.', 'pausatf-results'),
@@ -177,16 +175,15 @@ class AdminSettings {
 
         if (!FeatureManager::is_enabled('ranking_system')) {
             wp_send_json_error(__('Ranking System feature is not enabled.', 'pausatf-results'));
-            return;
         }
 
         if (class_exists('PAUSATF\\Results\\RankingSystem')) {
             $ranking = new \PAUSATF\Results\RankingSystem();
-            $year = date('Y');
+            $year = (int) date('Y');
 
             // Generate rankings for current year
-            $ranking->generate_rankings($year);
-            $ranking->generate_age_graded_rankings($year);
+            $ranking->generate_rankings($year, 'overall', 'points');
+            $ranking->generate_age_graded_rankings($year, 'M');
 
             wp_send_json_success([
                 'message' => sprintf(

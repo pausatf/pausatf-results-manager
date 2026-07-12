@@ -1,0 +1,22 @@
+parameters:
+    level: 8
+    paths:
+        - includes
+        - admin
+        - public
+        - pausatf-results.php
+    excludePaths:
+        - vendor
+        - node_modules
+        - tests
+        # PHP 8.4 Property Hooks not yet supported by PHPStan parser
+        - includes/sanctions/class-sanction.php
+        - includes/models/class-athlete-result.php
+    phpVersion: 80400
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        - '#Function apply_filters invoked with \d+ parameters, \d+ required#'
+        - '#Function do_action invoked with \d+ parameters, \d+ required#'
+    bootstrapFiles:
+        - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php

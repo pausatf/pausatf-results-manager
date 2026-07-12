@@ -1,0 +1,129 @@
+name: Generate SBOM
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'composer.json'
+      - 'composer.lock'
+      - 'package.json'
+      - 'package-lock.json'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  security-events: write
+
+jobs:
+  sbom-php:
+    name: Generate PHP SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Generate CycloneDX SBOM (JSON)
+        run: composer sbom
+
+      - name: Generate CycloneDX SBOM (XML)
+        run: composer sbom:xml
+
+      - name: Run security audit
+        run: composer security:audit
+        continue-on-error: true
+
+      - name: Upload PHP SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-php
+          path: |
+            sbom.cdx.json
+            sbom.cdx.xml
+            security-audit.json
+          retention-days: 90
+
+      - name: Upload SBOM to GitHub Security
+        if: github.event_name == 'release'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: sbom.cdx.json
+        continue-on-error: true
+
+  sbom-npm:
+    name: Generate npm SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate CycloneDX SBOM (JSON)
+        run: npm run sbom
+
+      - name: Generate CycloneDX SBOM (XML)
+        run: npm run sbom:xml
+
+      - name: Run security audit
+        run: npm run security:audit
+        continue-on-error: true
+
+      - name: Upload npm SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-npm
+          path: |
+            sbom.npm.cdx.json
+            sbom.npm.cdx.xml
+            security-audit.npm.json
+          retention-days: 90
+
+  combine-sboms:
+    name: Combine SBOMs
+    needs: [sbom-php, sbom-npm]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - name: Download PHP SBOM
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom-php
+          path: sboms/php
+
+      - name: Download npm SBOM
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom-npm
+          path: sboms/npm
+
+      - name: Create combined SBOM package
+        run: |
+          mkdir -p release-sbom
+          cp sboms/php/*.json release-sbom/
+          cp sboms/php/*.xml release-sbom/
+          cp sboms/npm/*.json release-sbom/
+          cp sboms/npm/*.xml release-sbom/
+          cd release-sbom && zip -r ../sbom-${{ github.ref_name }}.zip .
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sbom-${{ github.ref_name }}.zip
