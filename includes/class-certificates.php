@@ -49,16 +49,31 @@ class Certificates {
         global $wpdb;
         $table = $wpdb->prefix . 'pausatf_results';
 
+        // Only published events yield certificates; never leak results for
+        // draft/private/pending events via enumerable result_id.
         $result = $wpdb->get_row($wpdb->prepare(
             "SELECT r.*, p.post_title as event_name
              FROM {$table} r
              INNER JOIN {$wpdb->posts} p ON r.event_id = p.ID
-             WHERE r.id = %d",
+             WHERE r.id = %d AND p.post_status = 'publish'",
             $result_id
         ), ARRAY_A);
 
         if (!$result) {
             return false;
+        }
+
+        // Unknown templates fall back to the default; the value also keys the
+        // cache filename, so restrict it to the known set.
+        if (!isset(self::TEMPLATES[$template])) {
+            $template = 'finisher';
+        }
+
+        // Serve a cached file if one exists: enumeration cannot force repeated
+        // PDF generation, and the rate limit only gates first-time creation.
+        $cached = $this->cached_path("certificate-{$result_id}-{$template}.pdf");
+        if ($cached !== null) {
+            return $cached;
         }
 
         // Get event details
@@ -72,7 +87,7 @@ class Certificates {
         ]);
 
         // Convert to PDF using available library
-        return $this->html_to_pdf($html, "certificate-{$result_id}.pdf");
+        return $this->html_to_pdf($html, "certificate-{$result_id}-{$template}.pdf");
     }
 
     /**
@@ -270,7 +285,7 @@ class Certificates {
             "SELECT r.*, p.post_title as event_name
              FROM {$table} r
              INNER JOIN {$wpdb->posts} p ON r.event_id = p.ID
-             WHERE r.id = %d",
+             WHERE r.id = %d AND p.post_status = 'publish'",
             $result_id
         ), ARRAY_A);
 
@@ -278,7 +293,7 @@ class Certificates {
             return false;
         }
 
-        // Get dimensions for platform
+        // Get dimensions for platform (get_platform_dimensions allowlists via match)
         $dimensions = $this->get_platform_dimensions($platform);
 
         // Get event details
@@ -434,9 +449,16 @@ class Certificates {
             }
         }
 
-        // Fallback: save as HTML
+        // Fallback: save as HTML via the WP Filesystem API (idiomatic file write).
         $html_filepath = str_replace('.pdf', '.html', $filepath);
-        file_put_contents($html_filepath, $html);
+        global $wp_filesystem;
+        if (!$wp_filesystem) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            WP_Filesystem();
+        }
+        if (!$wp_filesystem || !$wp_filesystem->put_contents($html_filepath, $html, FS_CHMOD_FILE)) {
+            return false;
+        }
         return $html_filepath;
     }
 
@@ -481,58 +503,107 @@ class Certificates {
     }
 
     /**
-     * AJAX handler for certificate generation
+     * Return an existing cached artifact path, or null if it must be generated.
+     * Keeps enumeration cheap: repeat requests never re-run PDF/image builds.
      */
-    public function ajax_generate_certificate(): void {
-        $result_id = (int) ($_GET['result_id'] ?? 0);
-        $template = sanitize_text_field($_GET['template'] ?? 'finisher');
-
-        if (!$result_id) {
-            wp_die('Invalid result ID');
+    private function cached_path(string $filename): ?string {
+        $dir = wp_upload_dir()['basedir'] . '/pausatf-certificates/';
+        foreach ([$filename, str_replace('.pdf', '.html', $filename)] as $candidate) {
+            $path = $dir . basename($candidate);
+            if (is_file($path)) {
+                return $path;
+            }
         }
+        return null;
+    }
 
-        $filepath = $this->generate_certificate($result_id, $template);
-
-        if (!$filepath || !file_exists($filepath)) {
-            wp_die('Certificate generation failed');
+    /**
+     * Cap first-time generation per client so an enumeration of result_ids
+     * cannot force unbounded PDF/image builds (cache hits are not limited).
+     */
+    private function generation_allowed(): bool {
+        $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        $key = 'pausatf_cert_gen_' . hash('sha256', $ip);
+        $count = (int) get_transient($key);
+        if ($count >= 20) {
+            return false;
         }
+        set_transient($key, $count + 1, 10 * MINUTE_IN_SECONDS);
+        return true;
+    }
 
-        // Serve file
-        $filename = basename($filepath);
-        $extension = pathinfo($filepath, PATHINFO_EXTENSION);
-
-        header('Content-Type: ' . ($extension === 'pdf' ? 'application/pdf' : 'text/html'));
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Content-Length: ' . filesize($filepath));
-
-        readfile($filepath);
+    private function serve_file(string $filepath, string $disposition): void {
+        // Confine to the certificates directory: never serve an arbitrary path.
+        $dir = wp_upload_dir()['basedir'] . '/pausatf-certificates/';
+        $real_dir = realpath($dir);
+        $real_file = realpath($filepath);
+        if ($real_dir === false || $real_file === false || !str_starts_with($real_file, $real_dir . DIRECTORY_SEPARATOR)) {
+            wp_die('Not found', '', ['response' => 404]);
+        }
+        $extension = pathinfo($real_file, PATHINFO_EXTENSION);
+        $type = match ($extension) {
+            'pdf' => 'application/pdf',
+            'png' => 'image/png',
+            default => 'text/html',
+        };
+        nocache_headers();
+        header('Content-Type: ' . $type);
+        header('Content-Disposition: ' . $disposition . '; filename="' . basename($real_file) . '"');
+        header('Content-Length: ' . (string) filesize($real_file));
+        header('X-Content-Type-Options: nosniff');
+        readfile($real_file); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile -- streaming a confined binary download; WP has no core streaming helper
         exit;
     }
 
     /**
-     * AJAX handler for share card generation
+     * AJAX handler for certificate generation. Public by design (shareable),
+     * but hardened: published results only, cached, rate-limited on miss.
+     */
+    public function ajax_generate_certificate(): void {
+        $result_id = (int) ($_GET['result_id'] ?? 0);
+        $template = sanitize_key((string) ($_GET['template'] ?? 'finisher'));
+        if (!isset(self::TEMPLATES[$template])) {
+            $template = 'finisher';
+        }
+        if (!$result_id) {
+            wp_die('Invalid result ID', '', ['response' => 400]);
+        }
+
+        $cached = $this->cached_path("certificate-{$result_id}-{$template}.pdf");
+        if ($cached === null && !$this->generation_allowed()) {
+            wp_die('Too many requests. Please try again shortly.', '', ['response' => 429]);
+        }
+
+        $filepath = $cached ?? $this->generate_certificate($result_id, $template);
+        if (!$filepath || !file_exists($filepath)) {
+            wp_die('Not found', '', ['response' => 404]);
+        }
+        $this->serve_file($filepath, 'attachment');
+    }
+
+    /**
+     * AJAX handler for share card generation. Same hardening as certificates.
      */
     public function ajax_generate_share_card(): void {
         $result_id = (int) ($_GET['result_id'] ?? 0);
-        $platform = sanitize_text_field($_GET['platform'] ?? 'instagram');
-
+        $platform = sanitize_key((string) ($_GET['platform'] ?? 'instagram'));
+        $known = ['instagram', 'instagram_story', 'twitter', 'facebook', 'linkedin'];
+        if (!in_array($platform, $known, true)) {
+            $platform = 'instagram';
+        }
         if (!$result_id) {
-            wp_die('Invalid result ID');
+            wp_die('Invalid result ID', '', ['response' => 400]);
+        }
+
+        if (!$this->generation_allowed()) {
+            wp_die('Too many requests. Please try again shortly.', '', ['response' => 429]);
         }
 
         $filepath = $this->generate_share_card($result_id, $platform);
-
         if (!$filepath || !file_exists($filepath)) {
-            wp_die('Share card generation failed');
+            wp_die('Not found', '', ['response' => 404]);
         }
-
-        // Serve image
-        header('Content-Type: image/png');
-        header('Content-Disposition: inline; filename="share-' . $result_id . '.png"');
-        header('Content-Length: ' . filesize($filepath));
-
-        readfile($filepath);
-        exit;
+        $this->serve_file($filepath, 'inline');
     }
 
     /**
