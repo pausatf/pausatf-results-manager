@@ -626,6 +626,17 @@ class Certificates {
     private function generation_allowed(): bool {
         $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
         $key = 'pausatf_cert_gen_' . hash('sha256', $ip);
+
+        // Atomic increment when a persistent object cache is present (prod runs
+        // Redis), so concurrent requests cannot slip past the cap.
+        if (wp_using_ext_object_cache()) {
+            wp_cache_add($key, 0, 'pausatf', 10 * MINUTE_IN_SECONDS);
+            $count = wp_cache_incr($key, 1, 'pausatf');
+            return is_int($count) && $count <= 20;
+        }
+
+        // Fallback: transient check-then-set. A small race is acceptable for a
+        // DoS guard on an otherwise cached, publish-gated endpoint.
         $count = (int) get_transient($key);
         if ($count >= 20) {
             return false;
@@ -720,11 +731,13 @@ class Certificates {
             wp_die('Not found', '', ['response' => 404]);
         }
 
-        if (!$this->generation_allowed()) {
+        // Serve the cached card if present; only rate-limit real generation.
+        $cached = $this->cached_path($this->artifact_filename('share-card', $result_id, $platform, 'png'));
+        if ($cached === null && !$this->generation_allowed()) {
             wp_die('Too many requests. Please try again shortly.', '', ['response' => 429]);
         }
 
-        $filepath = $this->generate_share_card($result_id, $platform);
+        $filepath = $cached ?? $this->generate_share_card($result_id, $platform);
         if (!$filepath || !file_exists($filepath)) {
             wp_die('Not found', '', ['response' => 404]);
         }
