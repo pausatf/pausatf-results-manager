@@ -532,12 +532,35 @@ class Certificates {
         return true;
     }
 
+    /**
+     * Is this result's event currently published? Gates both generation and
+     * cache serving, so an unpublished event stops serving immediately.
+     */
+    private function result_is_public(int $result_id): bool {
+        global $wpdb;
+        $table = $wpdb->prefix . 'pausatf_results';
+        $status = $wpdb->get_var($wpdb->prepare(
+            "SELECT p.post_status FROM {$table} r
+             INNER JOIN {$wpdb->posts} p ON r.event_id = p.ID
+             WHERE r.id = %d",
+            $result_id
+        ));
+        return $status === 'publish';
+    }
+
     private function serve_file(string $filepath, string $disposition): void {
-        // Confine to the certificates directory: never serve an arbitrary path.
-        $dir = wp_upload_dir()['basedir'] . '/pausatf-certificates/';
-        $real_dir = realpath($dir);
+        // Confine to the plugin's own artifact directories: never an arbitrary path.
+        $base = wp_upload_dir()['basedir'];
+        $allowed = [
+            realpath($base . '/pausatf-certificates'),
+            realpath($base . '/pausatf-share-cards'),
+        ];
         $real_file = realpath($filepath);
-        if ($real_dir === false || $real_file === false || !str_starts_with($real_file, $real_dir . DIRECTORY_SEPARATOR)) {
+        $inside = $real_file !== false && array_filter(
+            $allowed,
+            static fn($dir) => $dir !== false && str_starts_with($real_file, $dir . DIRECTORY_SEPARATOR)
+        );
+        if (!$inside) {
             wp_die('Not found', '', ['response' => 404]);
         }
         $extension = pathinfo($real_file, PATHINFO_EXTENSION);
@@ -565,8 +588,8 @@ class Certificates {
         if (!isset(self::TEMPLATES[$template])) {
             $template = 'finisher';
         }
-        if (!$result_id) {
-            wp_die('Invalid result ID', '', ['response' => 400]);
+        if (!$result_id || !$this->result_is_public($result_id)) {
+            wp_die('Not found', '', ['response' => 404]);
         }
 
         $cached = $this->cached_path("certificate-{$result_id}-{$template}.pdf");
@@ -591,8 +614,8 @@ class Certificates {
         if (!in_array($platform, $known, true)) {
             $platform = 'instagram';
         }
-        if (!$result_id) {
-            wp_die('Invalid result ID', '', ['response' => 400]);
+        if (!$result_id || !$this->result_is_public($result_id)) {
+            wp_die('Not found', '', ['response' => 404]);
         }
 
         if (!$this->generation_allowed()) {
