@@ -39,7 +39,6 @@ class ResultsImporter {
             // Fetch HTML
             $response = wp_remote_get($url, [
                 'timeout' => 30,
-                'sslverify' => false,
             ]);
 
             if (is_wp_error($response)) {
