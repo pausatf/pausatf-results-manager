@@ -34,6 +34,9 @@ class Certificates {
         add_action('wp_ajax_pausatf_generate_share_card', [$this, 'ajax_generate_share_card']);
         add_action('wp_ajax_nopriv_pausatf_generate_share_card', [$this, 'ajax_generate_share_card']);
 
+        // Invalidate cached artifacts when an event is unpublished.
+        add_action('transition_post_status', [$this, 'purge_on_unpublish'], 10, 3);
+
         add_shortcode('pausatf_certificate_download', [$this, 'shortcode_download']);
         add_shortcode('pausatf_share_result', [$this, 'shortcode_share']);
     }
@@ -69,9 +72,11 @@ class Certificates {
             $template = 'finisher';
         }
 
+        $filename = $this->artifact_filename('certificate', $result_id, $template, 'pdf');
+
         // Serve a cached file if one exists: enumeration cannot force repeated
         // PDF generation, and the rate limit only gates first-time creation.
-        $cached = $this->cached_path("certificate-{$result_id}-{$template}.pdf");
+        $cached = $this->cached_path($filename);
         if ($cached !== null) {
             return $cached;
         }
@@ -87,7 +92,7 @@ class Certificates {
         ]);
 
         // Convert to PDF using available library
-        return $this->html_to_pdf($html, "certificate-{$result_id}-{$template}.pdf");
+        return $this->html_to_pdf($html, $filename);
     }
 
     /**
@@ -382,10 +387,13 @@ class Certificates {
 
         // Save image
         $upload_dir = wp_upload_dir();
-        $filename = "share-card-{$result['id']}-{$meta['platform']}.png";
+        $filename = $this->artifact_filename('share-card', (int) $result['id'], (string) $meta['platform'], 'png');
         $dir = $upload_dir['basedir'] . '/pausatf-share-cards/';
         $filepath = $dir . $filename;
-        $this->protect_dir($dir);
+        if (!$this->protect_dir($dir)) {
+            imagedestroy($image);
+            return false;
+        }
 
         // Atomic write: build to a temp file, then rename into place, so an
         // interrupted render never leaves a corrupt cached artifact.
@@ -439,7 +447,9 @@ class Certificates {
      */
     private function html_to_pdf(string $html, string $filename): string|false {
         $pdf_dir = wp_upload_dir()['basedir'] . '/pausatf-certificates/';
-        $this->protect_dir($pdf_dir);
+        if (!$this->protect_dir($pdf_dir)) {
+            return false;
+        }
         $filepath = $pdf_dir . $filename;
 
         // Try mPDF: render to a temp file, then atomically rename into place.
@@ -487,18 +497,57 @@ class Certificates {
      * listing, so downloads only flow through the publish-gated, rate-limited
      * handler. Mirrors the protected-uploads pattern used by major plugins.
      */
-    private function protect_dir(string $dir): void {
+    private function protect_dir(string $dir): bool {
         wp_mkdir_p($dir);
-        $htaccess = $dir . '.htaccess';
-        if (!file_exists($htaccess)) {
-            global $wp_filesystem;
-            if (!$wp_filesystem) {
-                require_once ABSPATH . 'wp-admin/includes/file.php';
-                WP_Filesystem();
-            }
-            if ($wp_filesystem) {
-                $wp_filesystem->put_contents($htaccess, "Require all denied\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n", FS_CHMOD_FILE);
-                $wp_filesystem->put_contents($dir . 'index.php', "<?php // Silence is golden.\n", FS_CHMOD_FILE);
+        global $wp_filesystem;
+        if (!$wp_filesystem) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            WP_Filesystem();
+        }
+        if (!$wp_filesystem) {
+            return false; // fail closed: no generation without a writable guard
+        }
+        if (!file_exists($dir . '.htaccess')) {
+            $wp_filesystem->put_contents($dir . '.htaccess', "Require all denied\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n", FS_CHMOD_FILE);
+            $wp_filesystem->put_contents($dir . 'web.config', "<?xml version=\"1.0\"?>\n<configuration><system.webServer><authorization><deny users=\"*\" /></authorization></system.webServer></configuration>\n", FS_CHMOD_FILE);
+            $wp_filesystem->put_contents($dir . 'index.php', "<?php // Silence is golden.\n", FS_CHMOD_FILE);
+        }
+        // Unpredictable HMAC filenames are the primary defense; on nginx the
+        // deny files are inert, so document the server block in a README.
+        if (!file_exists($dir . 'nginx.conf.example')) {
+            $wp_filesystem->put_contents(
+                $dir . 'nginx.conf.example',
+                "# Add to the server block to block direct access on nginx:\n"
+                . "location ~* /pausatf-(certificates|share-cards)/ { deny all; return 404; }\n",
+                FS_CHMOD_FILE
+            );
+        }
+        return true;
+    }
+
+    /**
+     * Purge cached artifacts for an event's results when it leaves 'publish',
+     * so nothing lingers on disk after the live gate would deny it.
+     */
+    public function purge_on_unpublish(string $new_status, string $old_status, \WP_Post $post): void {
+        if ($old_status !== 'publish' || $new_status === 'publish') {
+            return;
+        }
+        global $wpdb;
+        $table = $wpdb->prefix . 'pausatf_results';
+        $ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM {$table} WHERE event_id = %d", $post->ID));
+        if (!$ids) {
+            return;
+        }
+        $base = wp_upload_dir()['basedir'];
+        foreach (['/pausatf-certificates/', '/pausatf-share-cards/'] as $sub) {
+            foreach ((array) glob($base . $sub . '*') as $file) {
+                foreach ($ids as $id) {
+                    if (preg_match("~-{$id}-~", basename($file))) {
+                        wp_delete_file($file);
+                        break;
+                    }
+                }
             }
         }
     }
@@ -541,6 +590,18 @@ class Certificates {
             ]),
             default => $result_url,
         };
+    }
+
+    /**
+     * Build an unpredictable artifact filename. The HMAC (keyed by a site
+     * secret) makes direct-URL enumeration infeasible regardless of web
+     * server, so the publish gate and rate limit cannot be bypassed by
+     * guessing sequential ids.
+     */
+    private function artifact_filename(string $kind, int $result_id, string $variant, string $ext): string {
+        $variant = sanitize_key($variant);
+        $sig = substr(hash_hmac('sha256', "{$kind}-{$result_id}-{$variant}", wp_salt('auth')), 0, 32);
+        return "{$kind}-{$result_id}-{$variant}-{$sig}.{$ext}";
     }
 
     /**
@@ -633,7 +694,7 @@ class Certificates {
             wp_die('Not found', '', ['response' => 404]);
         }
 
-        $cached = $this->cached_path("certificate-{$result_id}-{$template}.pdf");
+        $cached = $this->cached_path($this->artifact_filename('certificate', $result_id, $template, 'pdf'));
         if ($cached === null && !$this->generation_allowed()) {
             wp_die('Too many requests. Please try again shortly.', '', ['response' => 429]);
         }
