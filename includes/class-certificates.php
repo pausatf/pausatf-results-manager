@@ -52,7 +52,7 @@ class Certificates {
         // Only published events yield certificates; never leak results for
         // draft/private/pending events via enumerable result_id.
         $result = $this->load_result($result_id);
-        if (!$result || $result['event_status'] !== 'publish') {
+        if (!$result || !$this->event_is_public($result)) {
             return false;
         }
 
@@ -275,7 +275,7 @@ class Certificates {
      */
     public function generate_share_card(int $result_id, string $platform = 'instagram'): string|false {
         $result = $this->load_result($result_id);
-        if (!$result || $result['event_status'] !== 'publish') {
+        if (!$result || !$this->event_is_public($result)) {
             return false;
         }
 
@@ -524,7 +524,7 @@ class Certificates {
      * so nothing lingers on disk after the live gate would deny it.
      */
     public function purge_on_unpublish(string $new_status, string $old_status, \WP_Post $post): void {
-        if ($old_status !== 'publish' || $new_status === 'publish') {
+        if ($post->post_type !== 'pausatf_event' || $old_status !== 'publish' || $new_status === 'publish') {
             return;
         }
         global $wpdb;
@@ -608,7 +608,7 @@ class Certificates {
         global $wpdb;
         $table = $wpdb->prefix . 'pausatf_results';
         $row = $wpdb->get_row($wpdb->prepare(
-            "SELECT r.*, p.post_status AS event_status, p.post_title AS event_name
+            "SELECT r.*, p.post_status AS event_status, p.post_password AS event_password, p.post_title AS event_name
              FROM {$table} r INNER JOIN {$wpdb->posts} p ON r.event_id = p.ID
              WHERE r.id = %d",
             $result_id
@@ -623,6 +623,15 @@ class Certificates {
      */
     private function row_version(array $row): string {
         return substr(md5((string) wp_json_encode($row)), 0, 16);
+    }
+
+    /**
+     * A result is publicly downloadable only when its event is published and
+     * not password-protected.
+     */
+    private function event_is_public(array $result): bool {
+        return ($result['event_status'] ?? '') === 'publish'
+            && ($result['event_password'] ?? '') === '';
     }
 
     /**
@@ -712,7 +721,7 @@ class Certificates {
             $template = 'finisher';
         }
         $result = $result_id ? $this->load_result($result_id) : null;
-        if (!$result || $result['event_status'] !== 'publish') {
+        if (!$result || !$this->event_is_public($result)) {
             wp_die('Not found', '', ['response' => 404]);
         }
         $version = $this->row_version($result);
@@ -740,7 +749,7 @@ class Certificates {
             $platform = 'instagram';
         }
         $result = $result_id ? $this->load_result($result_id) : null;
-        if (!$result || $result['event_status'] !== 'publish') {
+        if (!$result || !$this->event_is_public($result)) {
             wp_die('Not found', '', ['response' => 404]);
         }
         $version = $this->row_version($result);
