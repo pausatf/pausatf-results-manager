@@ -383,15 +383,25 @@ class Certificates {
         // Save image
         $upload_dir = wp_upload_dir();
         $filename = "share-card-{$result['id']}-{$meta['platform']}.png";
-        $filepath = $upload_dir['basedir'] . '/pausatf-share-cards/' . $filename;
+        $dir = $upload_dir['basedir'] . '/pausatf-share-cards/';
+        $filepath = $dir . $filename;
+        $this->protect_dir($dir);
 
-        // Ensure directory exists
-        wp_mkdir_p(dirname($filepath));
-
-        // Save PNG
-        imagepng($image, $filepath, 9);
+        // Atomic write: build to a temp file, then rename into place, so an
+        // interrupted render never leaves a corrupt cached artifact.
+        $tmp = wp_tempnam($filename, $dir);
+        if (!$tmp || !imagepng($image, $tmp, 9)) {
+            imagedestroy($image);
+            if ($tmp && file_exists($tmp)) {
+                wp_delete_file($tmp);
+            }
+            return false;
+        }
         imagedestroy($image);
-
+        if (!@rename($tmp, $filepath)) {
+            wp_delete_file($tmp);
+            return false;
+        }
         return $filepath;
     }
 
@@ -428,38 +438,69 @@ class Certificates {
      * Convert HTML to PDF
      */
     private function html_to_pdf(string $html, string $filename): string|false {
-        $upload_dir = wp_upload_dir();
-        $pdf_dir = $upload_dir['basedir'] . '/pausatf-certificates/';
-        wp_mkdir_p($pdf_dir);
-
+        $pdf_dir = wp_upload_dir()['basedir'] . '/pausatf-certificates/';
+        $this->protect_dir($pdf_dir);
         $filepath = $pdf_dir . $filename;
 
-        // Try to use mPDF if available
+        // Try mPDF: render to a temp file, then atomically rename into place.
         if (class_exists('Mpdf\Mpdf')) {
+            $tmp = wp_tempnam($filename, $pdf_dir);
             try {
-                $mpdf = new \Mpdf\Mpdf([
-                    'orientation' => 'L',
-                    'format' => 'Letter',
-                ]);
+                $mpdf = new \Mpdf\Mpdf(['orientation' => 'L', 'format' => 'Letter']);
                 $mpdf->WriteHTML($html);
-                $mpdf->Output($filepath, 'F');
-                return $filepath;
+                $mpdf->Output($tmp, 'F');
+                if (filesize($tmp) > 0 && @rename($tmp, $filepath)) {
+                    return $filepath;
+                }
             } catch (\Exception $e) {
                 error_log('PDF generation failed: ' . $e->getMessage());
             }
+            if ($tmp && file_exists($tmp)) {
+                wp_delete_file($tmp); // never leave a partial artifact
+            }
         }
 
-        // Fallback: save as HTML via the WP Filesystem API (idiomatic file write).
+        // Fallback: HTML via the WP Filesystem API, also written atomically.
         $html_filepath = str_replace('.pdf', '.html', $filepath);
         global $wp_filesystem;
         if (!$wp_filesystem) {
             require_once ABSPATH . 'wp-admin/includes/file.php';
             WP_Filesystem();
         }
-        if (!$wp_filesystem || !$wp_filesystem->put_contents($html_filepath, $html, FS_CHMOD_FILE)) {
+        if (!$wp_filesystem) {
+            return false;
+        }
+        $tmp = wp_tempnam(basename($html_filepath), $pdf_dir);
+        if (!$tmp
+            || !$wp_filesystem->put_contents($tmp, $html, FS_CHMOD_FILE)
+            || !@rename($tmp, $html_filepath)) {
+            if ($tmp && file_exists($tmp)) {
+                wp_delete_file($tmp);
+            }
             return false;
         }
         return $html_filepath;
+    }
+
+    /**
+     * Make an artifact directory deny direct web access (Apache) and index
+     * listing, so downloads only flow through the publish-gated, rate-limited
+     * handler. Mirrors the protected-uploads pattern used by major plugins.
+     */
+    private function protect_dir(string $dir): void {
+        wp_mkdir_p($dir);
+        $htaccess = $dir . '.htaccess';
+        if (!file_exists($htaccess)) {
+            global $wp_filesystem;
+            if (!$wp_filesystem) {
+                require_once ABSPATH . 'wp-admin/includes/file.php';
+                WP_Filesystem();
+            }
+            if ($wp_filesystem) {
+                $wp_filesystem->put_contents($htaccess, "Require all denied\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n", FS_CHMOD_FILE);
+                $wp_filesystem->put_contents($dir . 'index.php', "<?php // Silence is golden.\n", FS_CHMOD_FILE);
+            }
+        }
     }
 
     /**
