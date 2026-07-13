@@ -41,6 +41,19 @@ $options = [
     'pausatf_garmin_consumer_secret',
 ];
 
-foreach ($options as $option) {
-    delete_option($option);
+$delete_all = static function () use ($options): void {
+    foreach ($options as $option) {
+        delete_option($option);
+    }
+};
+
+if (is_multisite()) {
+    // delete_option only touches the current site; sweep every site in the network.
+    foreach (get_sites(['fields' => 'ids', 'number' => 0]) as $blog_id) {
+        switch_to_blog((int) $blog_id);
+        $delete_all();
+        restore_current_blog();
+    }
+} else {
+    $delete_all();
 }
