@@ -41,9 +41,25 @@ $options = [
     'pausatf_garmin_consumer_secret',
 ];
 
-$delete_all = static function () use ($options): void {
+// Per-user metadata, including third-party OAuth tokens, must also be purged.
+$user_meta = [
+    '_pausatf_strava_access_token',
+    '_pausatf_strava_refresh_token',
+    '_pausatf_strava_expires_at',
+    '_pausatf_strava_athlete_id',
+    '_pausatf_garmin_access_token',
+    '_pausatf_athlete_id',
+    '_pausatf_notify_results',
+    '_pausatf_notify_rankings',
+];
+
+$delete_all = static function () use ($options, $user_meta): void {
     foreach ($options as $option) {
         delete_option($option);
+    }
+    foreach ($user_meta as $meta_key) {
+        // Delete this key for every user (delete_all = true).
+        delete_metadata('user', 0, $meta_key, '', true);
     }
 };
 
