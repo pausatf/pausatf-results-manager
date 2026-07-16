@@ -48,6 +48,7 @@
         "test": "phpunit",
         "test:e2e": "codecept run",
         "test:coverage": "phpunit --coverage-html coverage",
+        "hooks:install": "git config core.hooksPath .githooks",
         "sbom": "composer CycloneDX:make-sbom --output-format=JSON --output-file=sbom.cdx.json",
         "sbom:xml": "composer CycloneDX:make-sbom --output-format=XML --output-file=sbom.cdx.xml",
         "security:audit": "composer audit --format=json > security-audit.json",
