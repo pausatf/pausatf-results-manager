@@ -18,6 +18,7 @@ Thumbs.db
 # Logs
 *.log
 debug.log
+.phpunit.result.cache
 
 # Local config
 .env
