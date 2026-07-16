@@ -84,8 +84,6 @@
 
     // Re-parse all events
     $('#pausatf-reparse-all').on('click', function() {
-        var $btn = $(this);
-
         if (!confirm('This will re-download and parse all previously imported events. This may take a long time. Continue?')) {
             return;
         }

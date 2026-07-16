@@ -1,0 +1,5 @@
+name: PAUSATF Results Manager CodeQL Configuration
+
+paths-ignore:
+  - '**/*.php'
+  - tests/e2e/vendor/**

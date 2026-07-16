@@ -7,6 +7,9 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   WP_URL: http://localhost:8080
   WP_ADMIN_USERNAME: admin
@@ -40,7 +43,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2
         with:
           php-version: '8.2'
           extensions: mbstring, intl, pdo_mysql, zip, gd
@@ -53,10 +56,10 @@ jobs:
           node-version: '20'
 
       - name: Install Chrome
-        uses: browser-actions/setup-chrome@latest
+        uses: browser-actions/setup-chrome@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # latest
 
       - name: Install ChromeDriver
-        uses: nanasess/setup-chromedriver@v2
+        uses: nanasess/setup-chromedriver@4f8e94349a351df0f048634f25fec36c3c91eded # v2
 
       - name: Start ChromeDriver
         run: |
@@ -69,22 +72,22 @@ jobs:
           cd /tmp/wordpress
           wp core download --version=6.4
           wp config create \
-            --dbname=$DB_NAME \
-            --dbuser=$DB_USER \
-            --dbpass=$DB_PASSWORD \
-            --dbhost=$DB_HOST \
+            --dbname="$DB_NAME" \
+            --dbuser="$DB_USER" \
+            --dbpass="$DB_PASSWORD" \
+            --dbhost="$DB_HOST" \
             --skip-check
           wp core install \
-            --url=$WP_URL \
+            --url="$WP_URL" \
             --title="PAUSATF Test" \
-            --admin_user=$WP_ADMIN_USERNAME \
-            --admin_password=$WP_ADMIN_PASSWORD \
+            --admin_user="$WP_ADMIN_USERNAME" \
+            --admin_password="$WP_ADMIN_PASSWORD" \
             --admin_email=admin@test.com \
             --skip-email
 
       - name: Install plugin
         run: |
-          cp -r $GITHUB_WORKSPACE /tmp/wordpress/wp-content/plugins/pausatf-results-manager
+          cp -r "$GITHUB_WORKSPACE" /tmp/wordpress/wp-content/plugins/pausatf-results-manager
           cd /tmp/wordpress
           wp plugin activate pausatf-results-manager
 
@@ -145,7 +148,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@ef5c64a93512d266b23b80bae95e46a67f30e703 # v3
 
       - name: Build test runner image
         run: |
