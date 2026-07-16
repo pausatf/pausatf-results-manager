@@ -91,7 +91,7 @@ jobs:
           cd /tmp/wordpress
           wp plugin activate pausatf-results-manager
           wp option update permalink_structure '/%postname%/'
-          wp option update pausatf_features '{"event_management":true,"results_management":true,"athlete_profiles":true,"club_management":true,"usatf_rules":true,"records_management":true,"rankings_system":true,"performance_analytics":true,"rest_api":true,"rdf_support":true,"import_export":true}' --format=json
+          wp eval 'update_option("pausatf_features", ["rest_api" => true, "rdf_support" => true, "club_manager" => true, "records_database" => true, "ranking_system" => true, "performance_tracker" => true, "csv_importer" => true, "data_exporter" => true]);'
           wp rewrite flush
 
       - name: Start WordPress server
