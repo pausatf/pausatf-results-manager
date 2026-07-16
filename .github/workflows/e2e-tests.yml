@@ -105,6 +105,23 @@ jobs:
               return false;
           }
 
+          if ('/wp-json' === $path || str_starts_with($path, '/wp-json/')) {
+              $rest_route = substr($path, strlen('/wp-json')) ?: '/';
+              $_GET['rest_route'] = $rest_route;
+              $_REQUEST['rest_route'] = $rest_route;
+          } elseif ('/sparql' === rtrim($path, '/')) {
+              $_GET['pausatf_sparql'] = '1';
+              $_REQUEST['pausatf_sparql'] = '1';
+          } elseif (preg_match('#^/rdf/([^/]+)/?([0-9]+)?/?$#', $path, $matches)) {
+              $type = $matches[1];
+              $_GET['pausatf_rdf'] = $type;
+              $_REQUEST['pausatf_rdf'] = $type;
+              if (!empty($matches[2])) {
+                  $_GET['pausatf_rdf_id'] = $matches[2];
+                  $_REQUEST['pausatf_rdf_id'] = $matches[2];
+              }
+          }
+
           $_SERVER['SCRIPT_NAME'] = '/index.php';
           require __DIR__ . '/index.php';
           PHP
