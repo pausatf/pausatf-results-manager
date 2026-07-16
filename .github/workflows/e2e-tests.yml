@@ -105,21 +105,28 @@ jobs:
               return false;
           }
 
+          $set_query_vars = static function (array $vars): void {
+              $query = http_build_query($vars);
+              foreach ($vars as $key => $value) {
+                  $_GET[$key] = $value;
+                  $_REQUEST[$key] = $value;
+              }
+              $_SERVER['QUERY_STRING'] = $query;
+              $_SERVER['REQUEST_URI'] = '/index.php?' . $query;
+          };
+
           if ('/wp-json' === $path || str_starts_with($path, '/wp-json/')) {
               $rest_route = substr($path, strlen('/wp-json')) ?: '/';
-              $_GET['rest_route'] = $rest_route;
-              $_REQUEST['rest_route'] = $rest_route;
+              $set_query_vars(['rest_route' => $rest_route]);
           } elseif ('/sparql' === rtrim($path, '/')) {
-              $_GET['pausatf_sparql'] = '1';
-              $_REQUEST['pausatf_sparql'] = '1';
+              $set_query_vars(['pausatf_sparql' => '1']);
           } elseif (preg_match('#^/rdf/([^/]+)/?([0-9]+)?/?$#', $path, $matches)) {
               $type = $matches[1];
-              $_GET['pausatf_rdf'] = $type;
-              $_REQUEST['pausatf_rdf'] = $type;
+              $vars = ['pausatf_rdf' => $type];
               if (!empty($matches[2])) {
-                  $_GET['pausatf_rdf_id'] = $matches[2];
-                  $_REQUEST['pausatf_rdf_id'] = $matches[2];
+                  $vars['pausatf_rdf_id'] = $matches[2];
               }
+              $set_query_vars($vars);
           }
 
           $_SERVER['SCRIPT_NAME'] = '/index.php';
