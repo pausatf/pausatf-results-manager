@@ -225,6 +225,18 @@ class ResultsRepository {
     private function find_existing_event(ParsedResults $parsed, array $metadata): ?int {
         global $wpdb;
 
+        $event_uid = $metadata['event_uid'] ?? $this->make_event_uid($parsed, $metadata);
+        if ($event_uid !== '') {
+            $existing = $wpdb->get_var($wpdb->prepare(
+                "SELECT post_id FROM {$wpdb->postmeta}
+                 WHERE meta_key = '_pausatf_event_uid' AND meta_value = %s LIMIT 1",
+                $event_uid
+            ));
+            if ($existing) {
+                return (int) $existing;
+            }
+        }
+
         // Check by source URL first (most reliable)
         if (!empty($metadata['source_url'])) {
             $existing = $wpdb->get_var($wpdb->prepare(
@@ -279,7 +291,9 @@ class ResultsRepository {
      * Prepare event meta data
      */
     private function prepare_event_meta(ParsedResults $parsed, array $metadata): array {
+        $event_uid = $metadata['event_uid'] ?? $this->make_event_uid($parsed, $metadata);
         return [
+            '_pausatf_event_uid' => $event_uid,
             '_pausatf_event_date' => $parsed->event_date,
             '_pausatf_event_location' => $parsed->event_location,
             '_pausatf_event_type' => $parsed->event_type,
@@ -292,6 +306,13 @@ class ResultsRepository {
             '_pausatf_import_warnings' => $parsed->warnings,
             '_pausatf_import_metadata' => $parsed->metadata,
         ];
+    }
+
+    /** Stable fallback for legacy HTML imports until canonical JSON supplies an ID. */
+    private function make_event_uid(ParsedResults $parsed, array $metadata): string {
+        $source = $metadata['source_url'] ?? $metadata['source_file'] ?? '';
+        $identity = strtolower(trim($source ?: ($parsed->event_name . '|' . ($parsed->event_date ?? ''))));
+        return $identity === '' ? '' : 'legacy-' . md5($identity);
     }
 
     /**
@@ -333,6 +354,36 @@ class ResultsRepository {
             return null;
         }
 
+        global $wpdb;
+
+        // Stable source identities always win over names. A name can change;
+        // a source identifier is the durable link across meet imports.
+        foreach (['athlete_uid', 'athlete_source_id'] as $key) {
+            if (!empty($result[$key])) {
+                $athlete = $wpdb->get_var($wpdb->prepare(
+                    "SELECT post_id FROM {$wpdb->postmeta}
+                     WHERE meta_key IN ('_pausatf_athlete_uid', '_pausatf_source_athlete_id')
+                     AND meta_value = %s LIMIT 1",
+                    sanitize_text_field((string) $result[$key])
+                ));
+                if ($athlete) {
+                    return (int) $athlete;
+                }
+            }
+        }
+
+        $normalized = $this->normalize_athlete_name($name);
+        if ($normalized !== '') {
+            $athlete = $wpdb->get_var($wpdb->prepare(
+                "SELECT post_id FROM {$wpdb->postmeta}
+                 WHERE meta_key = '_pausatf_name_normalized' AND meta_value = %s LIMIT 1",
+                $normalized
+            ));
+            if ($athlete) {
+                return (int) $athlete;
+            }
+        }
+
         // Try exact match first
         $athlete = get_page_by_title($name, OBJECT, 'pausatf_athlete');
         if ($athlete) {
@@ -346,6 +397,12 @@ class ResultsRepository {
          * @param array $result The result data being imported
          */
         return apply_filters('pausatf_find_athlete', null, $result);
+    }
+
+    private function normalize_athlete_name(string $name): string {
+        $name = remove_accents(wp_strip_all_tags($name));
+        $name = strtolower(preg_replace('/[^a-z0-9]+/', ' ', $name) ?: '');
+        return trim($name);
     }
 
     /**

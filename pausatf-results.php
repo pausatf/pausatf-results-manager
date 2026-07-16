@@ -3,7 +3,7 @@
  * Plugin Name: PAUSATF Results Manager
  * Plugin URI: https://github.com/pausatf/pausatf-results-manager
  * Description: Import, manage, and display PAUSATF legacy competition results with full athlete tracking.
- * Version: 2.2.0
+ * Version: 2.4.0
  * Author: PAUSATF
  * Author URI: https://www.pausatf.org
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('PAUSATF_RESULTS_VERSION', '2.2.0');
+define('PAUSATF_RESULTS_VERSION', '2.4.0');
 define('PAUSATF_RESULTS_FILE', __FILE__);
 define('PAUSATF_RESULTS_DIR', plugin_dir_path(__FILE__));
 define('PAUSATF_RESULTS_URL', plugin_dir_url(__FILE__));
@@ -74,6 +74,7 @@ final class Plugin {
         add_action('init', [$this, 'init']);
         add_action('admin_menu', [$this, 'admin_menu']);
         add_action('admin_enqueue_scripts', [$this, 'admin_assets']);
+        add_action('admin_init', [$this, 'maybe_upgrade']);
     }
 
     public function activate(): void {
@@ -130,7 +131,57 @@ final class Plugin {
     public function init(): void {
         $this->register_post_types();
         $this->register_taxonomies();
+        $this->register_event_meta();
         $this->load_components();
+    }
+
+    /** Register the canonical event data contract in the WordPress REST schema. */
+    private function register_event_meta(): void {
+        $fields = [
+            'event_uid' => ['type' => 'string', 'description' => 'Stable canonical event identifier.'],
+            'start_datetime' => ['type' => 'string', 'description' => 'Event start in ISO 8601 format.'],
+            'end_datetime' => ['type' => 'string', 'description' => 'Event end in ISO 8601 format.'],
+            'event_status' => ['type' => 'string', 'description' => 'Event status such as scheduled, postponed, or cancelled.'],
+            'attendance_mode' => ['type' => 'string', 'description' => 'In-person, online, or mixed attendance.'],
+            'venue_name' => ['type' => 'string', 'description' => 'Venue name.'],
+            'address_locality' => ['type' => 'string', 'description' => 'Venue city.'],
+            'address_region' => ['type' => 'string', 'description' => 'Venue state or region.'],
+            'postal_code' => ['type' => 'string', 'description' => 'Venue postal code.'],
+            'country' => ['type' => 'string', 'description' => 'Venue country code.'],
+            'map_url' => ['type' => 'string', 'format' => 'uri', 'description' => 'Verified map URL.'],
+            'registration_url' => ['type' => 'string', 'format' => 'uri', 'description' => 'Verified registration URL.'],
+            'registration_status' => ['type' => 'string', 'description' => 'Registration state.'],
+            'organizer_name' => ['type' => 'string', 'description' => 'Organizer name.'],
+            'organizer_url' => ['type' => 'string', 'format' => 'uri', 'description' => 'Organizer URL.'],
+            'source_url' => ['type' => 'string', 'format' => 'uri', 'description' => 'Authoritative source URL.'],
+            'source_site' => ['type' => 'string', 'description' => 'Source site name.'],
+            'source_hash' => ['type' => 'string', 'description' => 'Hash of the canonical source record.'],
+            'import_confidence' => ['type' => 'number', 'description' => 'Extraction confidence from 0 to 1.'],
+            'review_status' => ['type' => 'string', 'description' => 'Import review state.'],
+            'last_synced_at' => ['type' => 'string', 'description' => 'Last canonical sync timestamp.'],
+        ];
+
+        foreach ($fields as $name => $args) {
+            register_post_meta('pausatf_event', '_pausatf_' . $name, [
+                'type' => $args['type'],
+                'description' => $args['description'],
+                'single' => true,
+                'show_in_rest' => true,
+                'sanitize_callback' => $args['type'] === 'number' ? 'floatval' : 'sanitize_text_field',
+                'auth_callback' => static fn() => current_user_can('edit_posts'),
+            ]);
+        }
+
+        register_post_meta('pausatf_athlete', '_pausatf_athlete_uid', [
+            'type' => 'string', 'single' => true, 'show_in_rest' => true,
+            'sanitize_callback' => 'sanitize_text_field',
+            'auth_callback' => static fn() => current_user_can('edit_posts'),
+        ]);
+        register_post_meta('pausatf_athlete', '_pausatf_name_normalized', [
+            'type' => 'string', 'single' => true, 'show_in_rest' => true,
+            'sanitize_callback' => 'sanitize_text_field',
+            'auth_callback' => static fn() => current_user_can('edit_posts'),
+        ]);
     }
 
     private function register_post_types(): void {
@@ -202,6 +253,18 @@ final class Plugin {
             'show_in_rest' => true,
             'rewrite' => ['slug' => 'division'],
         ]);
+
+        register_taxonomy('pausatf_discipline', 'pausatf_event', [
+            'labels' => ['name' => __('Disciplines', 'pausatf-results'), 'singular_name' => __('Discipline', 'pausatf-results')],
+            'hierarchical' => true, 'public' => true, 'show_in_rest' => true,
+            'rewrite' => ['slug' => 'discipline'],
+        ]);
+
+        register_taxonomy('pausatf_series', 'pausatf_event', [
+            'labels' => ['name' => __('Event Series', 'pausatf-results'), 'singular_name' => __('Event Series', 'pausatf-results')],
+            'hierarchical' => false, 'public' => true, 'show_in_rest' => true,
+            'rewrite' => ['slug' => 'event-series'],
+        ]);
     }
 
     private function create_tables(): void {
@@ -215,6 +278,7 @@ final class Plugin {
             event_id bigint(20) unsigned NOT NULL,
             athlete_id bigint(20) unsigned DEFAULT NULL,
             athlete_name varchar(255) NOT NULL,
+            sex varchar(1) DEFAULT NULL,
             athlete_age smallint unsigned DEFAULT NULL,
             place smallint unsigned DEFAULT NULL,
             division varchar(50) DEFAULT NULL,
@@ -242,10 +306,13 @@ final class Plugin {
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             source_url varchar(500) NOT NULL,
             source_file varchar(255) DEFAULT NULL,
+            parser varchar(100) DEFAULT NULL,
+            event_id bigint(20) unsigned DEFAULT NULL,
             status enum('pending','processing','completed','failed') DEFAULT 'pending',
             records_imported int unsigned DEFAULT 0,
             error_message text DEFAULT NULL,
             imported_at datetime DEFAULT NULL,
+            updated_at datetime DEFAULT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY source_url (source_url(255)),
@@ -255,6 +322,15 @@ final class Plugin {
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql_results);
         dbDelta($sql_imports);
+    }
+
+    /** Run non-destructive schema upgrades for sites upgraded without reactivation. */
+    public function maybe_upgrade(): void {
+        $installed = get_option('pausatf_results_version', '0');
+        if (version_compare($installed, PAUSATF_RESULTS_VERSION, '<')) {
+            $this->create_tables();
+            update_option('pausatf_results_version', PAUSATF_RESULTS_VERSION);
+        }
     }
 
     private function load_components(): void {
@@ -280,6 +356,8 @@ final class Plugin {
 
         // Load core classes (always required)
         require_once PAUSATF_RESULTS_DIR . 'includes/class-results-importer.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/storage/class-results-repository.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-canonical-event-service.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-athlete-database.php';
 
         // Load optional core features
@@ -391,6 +469,7 @@ final class Plugin {
         }
 
         require_once PAUSATF_RESULTS_DIR . 'public/class-frontend-display.php';
+        require_once PAUSATF_RESULTS_DIR . 'public/class-event-jsonld.php';
 
         // Load public sanctions forms and views
         if (FeatureManager::is_enabled('sanctions_manager')) {

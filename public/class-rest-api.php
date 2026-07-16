@@ -118,6 +118,16 @@ class RestAPI {
             ],
         ]);
 
+        // Import one validated canonical event record from the GitHub pipeline.
+        register_rest_route(self::NAMESPACE, '/events/import', [
+            'methods' => 'POST',
+            'callback' => [$this, 'import_canonical_event'],
+            'permission_callback' => [$this, 'can_import'],
+            'args' => [
+                'publish' => ['type' => 'boolean', 'default' => false],
+            ],
+        ]);
+
         // Get divisions
         register_rest_route(self::NAMESPACE, '/divisions', [
             'methods' => 'GET',
@@ -244,6 +254,22 @@ class RestAPI {
         }
 
         return new \WP_REST_Response($result, 400);
+    }
+
+    /** Import a canonical event JSON object without creating a second event model. */
+    public function import_canonical_event(\WP_REST_Request $request): \WP_REST_Response {
+        $record = $request->get_json_params();
+        if (!is_array($record) || empty($record)) {
+            return new \WP_REST_Response(['success' => false, 'error' => 'Request body must be a canonical event JSON object.'], 400);
+        }
+
+        $service = new CanonicalEventService();
+        $result = $service->import($record, (bool) $request->get_param('publish'));
+        if (is_wp_error($result)) {
+            return new \WP_REST_Response(['success' => false, 'error' => $result->get_error_message()], 400);
+        }
+
+        return new \WP_REST_Response(['success' => true] + $result);
     }
 
     /**

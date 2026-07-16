@@ -223,6 +223,7 @@ class ResultsImporter {
             'post_title' => $parsed->event_name ?: 'Untitled Event',
             'post_status' => 'publish',
             'meta_input' => [
+                '_pausatf_event_uid' => $this->make_event_uid($parsed, $options),
                 '_pausatf_event_date' => $parsed->event_date,
                 '_pausatf_event_location' => $parsed->event_location,
                 '_pausatf_source_url' => $options['source_url'] ?? '',
@@ -288,6 +289,12 @@ class ResultsImporter {
         }
 
         return null;
+    }
+
+    private function make_event_uid(ParsedResults $parsed, array $options): string {
+        $source = $options['source_url'] ?? $options['source_file'] ?? '';
+        $identity = strtolower(trim($source ?: ($parsed->event_name . '|' . ($parsed->event_date ?? ''))));
+        return $identity === '' ? '' : 'legacy-' . md5($identity);
     }
 
     /**
@@ -394,12 +401,37 @@ class ResultsImporter {
      * Find or create athlete record
      */
     private function find_or_create_athlete(array $result): ?int {
-        // For now, just try to find existing athlete by name
-        // TODO: Implement fuzzy matching and athlete deduplication
-
         $name = $result['athlete_name'] ?? '';
         if (empty($name)) {
             return null;
+        }
+
+        global $wpdb;
+        foreach (['athlete_uid', 'athlete_source_id'] as $key) {
+            if (!empty($result[$key])) {
+                $id = $wpdb->get_var($wpdb->prepare(
+                    "SELECT post_id FROM {$wpdb->postmeta}
+                     WHERE meta_key IN ('_pausatf_athlete_uid', '_pausatf_source_athlete_id')
+                     AND meta_value = %s LIMIT 1",
+                    sanitize_text_field((string) $result[$key])
+                ));
+                if ($id) {
+                    return (int) $id;
+                }
+            }
+        }
+
+        $normalized = strtolower(trim(remove_accents(wp_strip_all_tags($name))));
+        $normalized = trim(preg_replace('/[^a-z0-9]+/', ' ', $normalized) ?: '');
+        if ($normalized) {
+            $id = $wpdb->get_var($wpdb->prepare(
+                "SELECT post_id FROM {$wpdb->postmeta}
+                 WHERE meta_key = '_pausatf_name_normalized' AND meta_value = %s LIMIT 1",
+                $normalized
+            ));
+            if ($id) {
+                return (int) $id;
+            }
         }
 
         $existing = get_page_by_title($name, OBJECT, 'pausatf_athlete');

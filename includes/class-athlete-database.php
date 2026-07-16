@@ -137,6 +137,7 @@ class AthleteDatabase {
             'post_title' => $name,
             'post_status' => 'publish',
             'meta_input' => [
+                '_pausatf_name_normalized' => $this->normalize_name($name),
                 '_pausatf_total_events' => $stats['total_events'] ?? 0,
                 '_pausatf_wins' => $stats['wins'] ?? 0,
                 '_pausatf_podiums' => $stats['podiums'] ?? 0,
@@ -151,6 +152,11 @@ class AthleteDatabase {
         }
 
         return $athlete_id;
+    }
+
+    private function normalize_name(string $name): string {
+        $name = remove_accents(wp_strip_all_tags($name));
+        return trim(strtolower(preg_replace('/[^a-z0-9]+/', ' ', $name) ?: ''));
     }
 
     /**
