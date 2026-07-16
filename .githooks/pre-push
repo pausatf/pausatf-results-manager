@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null || true)"
+if [[ -n "$upstream" ]]; then
+  diff_base="$upstream"
+else
+  default_branch="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' || true)"
+  diff_base="origin/${default_branch:-main}"
+fi
+
+if ! git rev-parse --verify --quiet "$diff_base" >/dev/null; then
+  diff_base="HEAD~1"
+fi
+
+changed_files="$(git diff --name-only --diff-filter=ACMRT "$diff_base"..HEAD || true)"
+staged_or_worktree="$(git diff --name-only --diff-filter=ACMRT; git diff --cached --name-only --diff-filter=ACMRT)"
+all_changed="$(printf '%s\n%s\n' "$changed_files" "$staged_or_worktree" | awk 'NF' | sort -u)"
+
+if [[ -z "$all_changed" ]]; then
+  exit 0
+fi
+
+echo "[pre-push] Checking for unresolved merge markers..."
+if printf '%s\n' "$all_changed" | xargs -r grep -nE '^(<<<<<<<|=======|>>>>>>>)' --; then
+  echo "[pre-push] Merge conflict markers found." >&2
+  exit 1
+fi
+
+php_files="$(printf '%s\n' "$all_changed" | grep -E '\.php$' || true)"
+if [[ -n "$php_files" ]]; then
+  echo "[pre-push] Running PHP syntax checks on changed PHP files..."
+  while IFS= read -r file; do
+    [[ -f "$file" ]] || continue
+    php -l "$file" >/dev/null
+  done <<< "$php_files"
+fi
+
+workflow_files="$(printf '%s\n' "$all_changed" | grep -E '^\.github/workflows/.*\.ya?ml$' || true)"
+if [[ -n "$workflow_files" ]] && command -v actionlint >/dev/null 2>&1; then
+  echo "[pre-push] Running actionlint on changed workflows..."
+  while IFS= read -r file; do
+    [[ -f "$file" ]] || continue
+    actionlint "$file"
+  done <<< "$workflow_files"
+elif [[ -n "$workflow_files" ]]; then
+  echo "[pre-push] actionlint not installed; skipping workflow lint."
+fi
+
+if printf '%s\n' "$all_changed" | grep -Eq '^(includes/(class-results-importer|storage/class-results-repository|parsers/)|tests/(Parser|bootstrap)|composer\.(json|lock)|phpunit\.xml)'; then
+  echo "[pre-push] Running parser/importer unit tests..."
+  composer test -- --filter Parser
+fi
+
+echo "[pre-push] OK"

@@ -3,9 +3,9 @@
  * PHPUnit bootstrap file
  */
 
-// Define test constants
-define('PAUSATF_TESTING', true);
-define('ABSPATH', '/tmp/wordpress/');
+// Define test constants.
+defined('PAUSATF_TESTING') || define('PAUSATF_TESTING', true);
+defined('ABSPATH') || define('ABSPATH', '/tmp/wordpress/');
 
 // Mock WordPress functions for unit testing
 if (!function_exists('__')) {
