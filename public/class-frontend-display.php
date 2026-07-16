@@ -441,7 +441,13 @@ class FrontendDisplay {
     }
 }
 
-// Initialize
-add_action('plugins_loaded', function() {
+// The component file is loaded during the main plugin's `init` callback, after
+// `plugins_loaded` has already fired. Initialize immediately in that case so
+// public shortcodes are available on normal frontend requests.
+if (did_action('plugins_loaded')) {
     FrontendDisplay::instance();
-});
+} else {
+    add_action('plugins_loaded', function() {
+        FrontendDisplay::instance();
+    });
+}
