@@ -94,7 +94,7 @@ jobs:
       - name: Start WordPress server
         run: |
           cd /tmp/wordpress
-          php -S 0.0.0.0:8080 &
+          php -S 0.0.0.0:8080 index.php &
           sleep 5
 
       - name: Cache Composer dependencies
@@ -161,18 +161,8 @@ jobs:
 
       - name: Setup WordPress
         run: |
-          docker compose -f docker-compose.yml run --rm wp-cli bash -c "
-            until mysql -hdb -uwordpress -pwordpress -e 'SELECT 1' &>/dev/null; do sleep 2; done
-            wp core install \
-              --url=http://wordpress \
-              --title='PAUSATF Test' \
-              --admin_user=admin \
-              --admin_password=admin \
-              --admin_email=admin@test.com \
-              --skip-email \
-              --allow-root
-            wp plugin activate pausatf-results-manager --allow-root
-          "
+          docker compose -f docker-compose.yml run --rm wp-cli
+          docker compose -f docker-compose.yml run --rm --entrypoint wp wp-cli core is-installed --path=/var/www/html --allow-root
 
       - name: Run E2E tests
         run: |
