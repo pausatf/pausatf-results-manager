@@ -90,6 +90,8 @@ jobs:
           cp -r "$GITHUB_WORKSPACE" /tmp/wordpress/wp-content/plugins/pausatf-results-manager
           cd /tmp/wordpress
           wp plugin activate pausatf-results-manager
+          wp option update permalink_structure '/%postname%/'
+          wp rewrite flush
 
       - name: Start WordPress server
         run: |
