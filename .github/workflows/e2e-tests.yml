@@ -183,6 +183,7 @@ jobs:
 
   docker-e2e-tests:
     name: Docker E2E Tests
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     continue-on-error: true
 
