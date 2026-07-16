@@ -20,9 +20,8 @@ modules:
             dsn: 'mysql:host=%DB_HOST%;dbname=%DB_NAME%'
             user: '%DB_USER%'
             password: '%DB_PASSWORD%'
-            dump: tests/_data/dump.sql
-            populate: true
-            cleanup: true
+            populate: false
+            cleanup: false
         - \Helper\Acceptance
 
 step_decorators:
