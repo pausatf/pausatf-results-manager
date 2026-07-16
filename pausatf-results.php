@@ -336,6 +336,7 @@ final class Plugin {
     private function load_components(): void {
         // Load Feature Manager first (always required)
         require_once PAUSATF_RESULTS_DIR . 'includes/class-feature-manager.php';
+        FeatureManager::init();
 
         // Load parsers (always required for core functionality)
         require_once PAUSATF_RESULTS_DIR . 'includes/parsers/interface-parser.php';
