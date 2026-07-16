@@ -96,7 +96,7 @@ services:
       TEST_DB_NAME: wordpress_tests
     volumes:
       - ./:/app/plugin:ro
-      - ./tests:/app/tests
+      - ./tests/e2e/tests:/app/tests
       - test_results:/app/tests/_output
     networks:
       - pausatf_network
