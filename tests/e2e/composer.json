@@ -10,7 +10,7 @@
         "codeception/module-asserts": "^3.0",
         "codeception/module-rest": "^3.3",
         "codeception/module-phpbrowser": "^3.0",
-        "lucatume/wp-browser": "^3.5",
+        "lucatume/wp-browser": "^4.7",
         "guzzlehttp/guzzle": "^7.8"
     },
     "autoload": {
