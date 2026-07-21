@@ -1,7 +1,5 @@
 version: 2
 updates:
-  # JavaScript files in this plugin are static assets and there are currently no npm/yarn/pnpm manifests.
-  # Add an npm ecosystem block when package manager manifests are added to the repository.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -9,3 +7,78 @@ updates:
       day: "monday"
     labels:
       - "dependencies"
+
+  # PHP (plugin dev tooling)
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "php"
+    groups:
+      composer:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # PHP (end-to-end test harness)
+  - package-ecosystem: "composer"
+    directory: "/tests/e2e"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "php"
+    groups:
+      composer:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # JavaScript build tooling
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "javascript"
+    groups:
+      npm:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Compose stack
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "docker"
+    groups:
+      docker:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # End-to-end test image
+  - package-ecosystem: "docker"
+    directory: "/tests/e2e"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "docker"
+    groups:
+      docker:
+        update-types:
+          - "minor"
+          - "patch"
