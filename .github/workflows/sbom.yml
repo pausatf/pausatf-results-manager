@@ -13,19 +13,26 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  security-events: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   sbom-php:
     name: Generate PHP SBOM
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      security-events: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: '8.4'
           tools: composer:v2
@@ -44,7 +51,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload PHP SBOM artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sbom-php
           path: |
@@ -55,20 +62,23 @@ jobs:
 
       - name: Upload SBOM to GitHub Security
         if: github.event_name == 'release'
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
         with:
           sarif_file: sbom.cdx.json
         continue-on-error: true
 
   sbom-npm:
     name: Generate npm SBOM
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '20'
           cache: 'npm'
@@ -87,7 +97,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload npm SBOM artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sbom-npm
           path: |
@@ -99,17 +109,20 @@ jobs:
   combine-sboms:
     name: Combine SBOMs
     needs: [sbom-php, sbom-npm]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     if: github.event_name == 'release'
+    permissions:
+      contents: write
     steps:
       - name: Download PHP SBOM
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: sbom-php
           path: sboms/php
 
       - name: Download npm SBOM
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: sbom-npm
           path: sboms/npm
@@ -124,6 +137,6 @@ jobs:
           cd release-sbom && zip -r ../sbom-${{ github.ref_name }}.zip .
 
       - name: Upload to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: sbom-${{ github.ref_name }}.zip
