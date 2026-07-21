@@ -138,7 +138,7 @@ jobs:
           sleep 5
 
       - name: Cache Composer dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: tests/e2e/vendor
           key: ${{ runner.os }}-composer-${{ hashFiles('tests/e2e/composer.lock') }}
