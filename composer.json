@@ -15,7 +15,7 @@
     "require-dev": {
         "codeception/codeception": "^5.1",
         "codeception/module-webdriver": "^4.0",
-        "cyclonedx/cyclonedx-php-composer": "^5.0",
+        "cyclonedx/cyclonedx-php-composer": "^6.2",
         "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^1.11",
