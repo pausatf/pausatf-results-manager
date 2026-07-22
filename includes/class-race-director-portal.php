@@ -520,24 +520,39 @@ class RaceDirectorPortal {
             wp_send_json_error('Invalid event');
         }
 
-        // Handle file upload
-        if (empty($_FILES['results_file'])) {
+        // Handle file upload. Fail closed on a missing or errored upload (size overflow,
+        // partial transfer, no file) before any filetype inspection touches tmp_name.
+        if (empty($_FILES['results_file']) || !isset($_FILES['results_file']['error'])
+            || UPLOAD_ERR_OK !== $_FILES['results_file']['error']
+            || !is_uploaded_file($_FILES['results_file']['tmp_name'] ?? '')) {
             wp_send_json_error('No file uploaded');
         }
 
         $file = $_FILES['results_file'];
 
-        // Validate file
-        $allowed_types = ['text/csv', 'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'text/html', 'application/zip'];
+        // Gate on the file-name extension, never $file['type'] (the spoofable client
+        // multipart Content-Type). This allowlist is what blocks .php/.phtml/.phar/.svg/
+        // .htaccess. The accepted formats are inert data (spreadsheets, timing exports,
+        // zip) plus HTML result pages, which are neutralized to a .txt store extension.
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowed_ext = ['csv', 'xls', 'xlsx', 'html', 'htm', 'hy3', 'cl2', 'zip'];
 
-        if (!in_array($file['type'], $allowed_types)) {
-            // Check by extension as fallback
-            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            $allowed_ext = ['csv', 'xlsx', 'xls', 'html', 'htm', 'hy3', 'cl2', 'zip'];
+        if (!in_array($ext, $allowed_ext, true)) {
+            wp_send_json_error('Invalid file type');
+        }
 
-            if (!in_array($ext, $allowed_ext)) {
+        // Defense in depth: reject a data file whose bytes are actually active markup or a
+        // script (e.g. a webshell renamed to .csv). html/htm are legitimately markup and
+        // are made inert by the .txt store extension, so they skip this check.
+        if (!in_array($ext, ['html', 'htm'], true) && function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $real_mime = $finfo ? finfo_file($finfo, $file['tmp_name']) : '';
+            if ($finfo) {
+                finfo_close($finfo);
+            }
+            $active_mimes = ['text/html', 'text/x-php', 'application/x-php', 'application/xhtml+xml',
+                'image/svg+xml', 'text/javascript', 'application/javascript'];
+            if (in_array($real_mime, $active_mimes, true)) {
                 wp_send_json_error('Invalid file type');
             }
         }
@@ -547,7 +562,17 @@ class RaceDirectorPortal {
         $target_dir = $upload_dir['basedir'] . '/pausatf-uploads/' . date('Y/m/');
         wp_mkdir_p($target_dir);
 
-        $filename = uniqid('results_') . '_' . sanitize_file_name($file['name']);
+        // Result pages are parsed from their contents, not executed, so store HTML under a
+        // neutral extension: the uploads directory is web-reachable and would otherwise
+        // serve attacker markup as an active document (stored XSS).
+        $store_ext = in_array($ext, ['html', 'htm'], true) ? 'txt' : $ext;
+
+        // Collapse inner dots so a crafted name cannot smuggle a second extension.
+        $base = str_replace('.', '_', sanitize_file_name(pathinfo($file['name'], PATHINFO_FILENAME)));
+        if ('' === $base) {
+            $base = 'results';
+        }
+        $filename = uniqid('results_') . '_' . $base . '.' . $store_ext;
         $target_path = $target_dir . $filename;
 
         if (!move_uploaded_file($file['tmp_name'], $target_path)) {
