@@ -44,7 +44,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload PHP SBOM artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-php
           path: |
@@ -87,7 +87,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload npm SBOM artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-npm
           path: |
