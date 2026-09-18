@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # WordPress with our plugin for E2E testing
   wordpress:
-    image: wordpress:6.4-php8.2-apache
+    image: wordpress:7.1-php8.4-apache
     container_name: pausatf_wordpress
     depends_on:
       - db
@@ -61,7 +61,7 @@ services:
 
   # WordPress CLI for setup and testing commands
   wp-cli:
-    image: wordpress:cli-php8.2
+    image: wordpress:cli-php8.4
     container_name: pausatf_wp_cli
     depends_on:
       wordpress:

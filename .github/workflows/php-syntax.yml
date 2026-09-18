@@ -1,0 +1,40 @@
+name: PHP Syntax
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: php-syntax-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php-syntax:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
+      - name: Check every tracked PHP file
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          while IFS= read -r -d '' file; do
+            php -l "$file"
+            count=$((count + 1))
+          done < <(git ls-files -z '*.php')
+          test "$count" -gt 0
+      - name: Install unit test dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Unit tests
+        run: vendor/bin/phpunit

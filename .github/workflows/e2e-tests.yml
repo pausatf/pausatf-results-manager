@@ -19,11 +19,15 @@ env:
   DB_USER: root
   DB_PASSWORD: root
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   e2e-tests:
     name: End-to-End Tests
-    runs-on: ubuntu-latest
-    continue-on-error: true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
 
     services:
       mysql:
@@ -46,7 +50,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
           extensions: mbstring, intl, pdo_mysql, zip, gd
           coverage: none
           tools: composer, wp-cli
@@ -54,7 +58,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install Chrome
         uses: browser-actions/setup-chrome@2e1d749697dd1612b833dba4a722266286fbefcd # v2.1.2
@@ -71,7 +75,7 @@ jobs:
         run: |
           mkdir -p /tmp/wordpress
           cd /tmp/wordpress
-          wp core download --version=6.4
+          wp core download --version=7.1.1
           wp config create \
             --dbname="$DB_NAME" \
             --dbuser="$DB_USER" \
@@ -150,11 +154,11 @@ jobs:
         run: composer install --prefer-dist --no-progress
 
       - name: Generate Codeception support files
+        id: dependencies
         working-directory: tests/e2e
         run: vendor/bin/codecept build
 
       - name: Run API tests
-        continue-on-error: true
         working-directory: tests/e2e
         run: |
           vendor/bin/codecept run api --steps --no-colors
@@ -163,7 +167,7 @@ jobs:
           DB_HOST: 127.0.0.1
 
       - name: Run acceptance tests
-        continue-on-error: true
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         working-directory: tests/e2e
         run: |
           vendor/bin/codecept run acceptance --steps --no-colors
@@ -173,7 +177,7 @@ jobs:
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v7
-        if: failure()
+        if: ${{ !cancelled() }}
         with:
           name: e2e-test-output
           path: |
@@ -184,8 +188,8 @@ jobs:
   docker-e2e-tests:
     name: Docker E2E Tests
     if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    continue-on-error: true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -205,25 +209,23 @@ jobs:
 
       - name: Setup WordPress
         timeout-minutes: 5
-        continue-on-error: true
         run: |
           docker compose -f docker-compose.yml run --rm wp-cli
           docker compose -f docker-compose.yml run --rm --entrypoint wp wp-cli core is-installed --path=/var/www/html --allow-root
 
       - name: Run E2E tests
         timeout-minutes: 10
-        continue-on-error: true
         run: |
           docker compose -f docker-compose.yml run --rm test-runner
 
       - name: Capture logs on failure
-        if: failure()
+        if: ${{ !cancelled() }}
         run: |
           docker compose -f docker-compose.yml logs > docker-logs.txt
 
       - name: Upload Docker logs
         uses: actions/upload-artifact@v7
-        if: failure()
+        if: ${{ !cancelled() }}
         with:
           name: docker-e2e-logs
           path: docker-logs.txt
