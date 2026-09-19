@@ -65,7 +65,7 @@ final class Sanction implements Arrayable, Jsonable
     /**
      * National status with validation
      */
-    public string $nationalStatus {
+    public string $nationalStatus = 'not_submitted' {
         get => $this->nationalStatus;
         set(string $value) {
             if (!in_array($value, self::VALID_NATIONAL_STATUSES, true)) {
@@ -75,12 +75,12 @@ final class Sanction implements Arrayable, Jsonable
             }
             $this->nationalStatus = $value;
         }
-    } = 'not_submitted';
+    }
 
     /**
      * Event name - required, trimmed on set
      */
-    public string $eventName {
+    public string $eventName = '' {
         get => $this->eventName;
         set(string $value) {
             $trimmed = trim($value);
@@ -92,7 +92,7 @@ final class Sanction implements Arrayable, Jsonable
             }
             $this->eventName = $trimmed;
         }
-    } = '';
+    }
 
     /**
      * Event date with validation
@@ -114,7 +114,7 @@ final class Sanction implements Arrayable, Jsonable
     /**
      * Optional event end date
      */
-    public ?\DateTimeImmutable $eventEndDate {
+    public ?\DateTimeImmutable $eventEndDate = null {
         get => $this->eventEndDate;
         set(\DateTimeImmutable|string|null $value) {
             if ($value === null) {
@@ -134,12 +134,12 @@ final class Sanction implements Arrayable, Jsonable
             }
             $this->eventEndDate = $value;
         }
-    } = null;
+    }
 
     /**
      * Event type with validation
      */
-    public string $eventType {
+    public string $eventType = 'road' {
         get => $this->eventType;
         set(string $value) {
             if (!in_array($value, self::VALID_EVENT_TYPES, true)) {
@@ -149,7 +149,7 @@ final class Sanction implements Arrayable, Jsonable
             }
             $this->eventType = $value;
         }
-    } = 'road';
+    }
 
     /**
      * Event distance (e.g., "5K", "Half Marathon")
@@ -168,7 +168,7 @@ final class Sanction implements Arrayable, Jsonable
     /**
      * Event website URL with validation
      */
-    public string $eventWebsite {
+    public string $eventWebsite = '' {
         get => $this->eventWebsite;
         set(string $value) {
             if ($value !== '' && !filter_var($value, FILTER_VALIDATE_URL)) {
@@ -176,7 +176,7 @@ final class Sanction implements Arrayable, Jsonable
             }
             $this->eventWebsite = $value;
         }
-    } = '';
+    }
 
     /**
      * Course certification
@@ -192,7 +192,7 @@ final class Sanction implements Arrayable, Jsonable
     /**
      * Organizer email with validation
      */
-    public string $organizerEmail {
+    public string $organizerEmail = '' {
         get => $this->organizerEmail;
         set(string $value) {
             if ($value !== '' && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
@@ -200,7 +200,7 @@ final class Sanction implements Arrayable, Jsonable
             }
             $this->organizerEmail = $value;
         }
-    } = '';
+    }
 
     public string $organizerPhone = '';
     public string $organizerUsatfNumber = '';
@@ -212,7 +212,7 @@ final class Sanction implements Arrayable, Jsonable
     /**
      * Participation estimates with auto fee calculation
      */
-    public int $estimatedFinishers {
+    public int $estimatedFinishers = 0 {
         get => $this->estimatedFinishers;
         set(int $value) {
             if ($value < 0) {
@@ -222,7 +222,7 @@ final class Sanction implements Arrayable, Jsonable
             // Trigger fee recalculation
             $this->recalculateFees();
         }
-    } = 0;
+    }
 
     public int $estimatedVolunteers = 0;
     public bool $hasEliteAthletes = false;
@@ -230,7 +230,7 @@ final class Sanction implements Arrayable, Jsonable
     /**
      * Prize money with validation
      */
-    public float $prizeMoneyTotal {
+    public float $prizeMoneyTotal = 0.0 {
         get => $this->prizeMoneyTotal;
         set(float $value) {
             if ($value < 0) {
@@ -238,7 +238,7 @@ final class Sanction implements Arrayable, Jsonable
             }
             $this->prizeMoneyTotal = $value;
         }
-    } = 0.0;
+    }
 
     public bool $hasWheelchairDivision = false;
 
@@ -271,7 +271,7 @@ final class Sanction implements Arrayable, Jsonable
     /**
      * Local workflow status with validation and state machine rules
      */
-    public string $localStatus {
+    public string $localStatus = 'draft' {
         get => $this->localStatus;
         set(string $value) {
             if (!in_array($value, self::VALID_STATUSES, true)) {
@@ -285,7 +285,7 @@ final class Sanction implements Arrayable, Jsonable
             }
             $this->localStatus = $value;
         }
-    } = 'draft';
+    }
 
     /**
      * Reviewer information - public read, private write
@@ -390,6 +390,16 @@ final class Sanction implements Arrayable, Jsonable
                         : $value,
                     default => $value,
                 };
+            }
+
+            // Hydration restores an existing state, rather than transitioning from draft.
+            // Validate the stored value before bypassing only the transition hook.
+            if ($camelKey === 'localStatus') {
+                if (!in_array($value, self::VALID_STATUSES, true)) {
+                    throw new \InvalidArgumentException('Invalid stored local status');
+                }
+                $property->setRawValue($sanction, $value);
+                continue;
             }
 
             // Check if this is a private(set) property

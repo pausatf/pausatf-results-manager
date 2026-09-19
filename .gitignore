@@ -24,3 +24,8 @@ debug.log
 # Local config
 .env
 *.local.php
+
+# Generated CI reports
+sbom*.cdx.json
+sbom*.cdx.xml
+security-audit*.json

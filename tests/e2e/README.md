@@ -5,7 +5,7 @@ End-to-end tests for the PAUSATF Results Manager WordPress plugin using Docker a
 ## Prerequisites
 
 - Docker and Docker Compose
-- PHP 8.2+ (for local development)
+- PHP 8.4+ (for local development)
 - Composer
 
 ## Quick Start
@@ -48,8 +48,11 @@ End-to-end tests for the PAUSATF Results Manager WordPress plugin using Docker a
 
 4. Run tests:
    ```bash
+   export WEBDRIVER_HOST=127.0.0.1
    vendor/bin/codecept run
    ```
+
+   Set `WEBDRIVER_HOST` to the Selenium/ChromeDriver host. Docker Compose sets it to `chrome`; native CI uses `127.0.0.1`.
 
 ## Test Suites
 

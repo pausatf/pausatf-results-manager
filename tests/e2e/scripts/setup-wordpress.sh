@@ -2,22 +2,33 @@
 # WordPress E2E Test Setup Script
 # Sets up WordPress with the PAUSATF Results Manager plugin for testing
 
-set -e
+set -euo pipefail
+
+: "${DB_HOST:?required}" "${DB_USER:?required}" "${DB_PASSWORD:?required}"
+: "${WP_URL:?required}" "${WP_ADMIN_USERNAME:?required}" "${WP_ADMIN_PASSWORD:?required}"
+
+wait_for() {
+    local attempt
+    for ((attempt = 1; attempt <= 60; attempt++)); do
+        if "$@" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 2
+    done
+    echo "Timed out waiting for $1" >&2
+    return 1
+}
 
 echo "=== PAUSATF Results Manager E2E Test Setup ==="
 
 # Wait for MySQL to be ready
 echo "Waiting for MySQL..."
-until mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" -e "SELECT 1" &>/dev/null; do
-    sleep 2
-done
+wait_for mysql --connect-timeout=3 -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" -e "SELECT 1"
 echo "MySQL is ready!"
 
 # Wait for WordPress to be ready
 echo "Waiting for WordPress..."
-until curl -s http://wordpress:80 > /dev/null; do
-    sleep 2
-done
+wait_for curl --fail --silent --max-time 3 "$WP_URL"
 echo "WordPress is ready!"
 
 # Install WordPress if not already installed
@@ -54,7 +65,8 @@ if wp plugin is-installed pausatf-results-manager --path=/var/www/html --allow-r
     wp plugin activate pausatf-results-manager --path=/var/www/html --allow-root
     echo "Plugin activated!"
 else
-    echo "Warning: Plugin not found. Make sure it's mounted correctly."
+    echo "Plugin not found. Make sure it's mounted correctly." >&2
+    exit 1
 fi
 
 # Create test pages
@@ -136,5 +148,4 @@ echo ""
 echo "=== Setup Complete ==="
 echo "WordPress URL: $WP_URL"
 echo "Admin Username: $WP_ADMIN_USERNAME"
-echo "Admin Password: $WP_ADMIN_PASSWORD"
 echo ""
