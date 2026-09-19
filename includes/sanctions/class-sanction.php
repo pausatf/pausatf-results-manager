@@ -392,6 +392,16 @@ final class Sanction implements Arrayable, Jsonable
                 };
             }
 
+            // Hydration restores an existing state, rather than transitioning from draft.
+            // Validate the stored value before bypassing only the transition hook.
+            if ($camelKey === 'localStatus') {
+                if (!in_array($value, self::VALID_STATUSES, true)) {
+                    throw new \InvalidArgumentException('Invalid stored local status');
+                }
+                $property->setRawValue($sanction, $value);
+                continue;
+            }
+
             // Check if this is a private(set) property
             if (str_contains((string) $property, 'private(set)')) {
                 $property->setValue($sanction, $value);

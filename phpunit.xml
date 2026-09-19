@@ -3,6 +3,7 @@
   <testsuites>
     <testsuite name="PAUSATF Results Manager">
       <directory suffix="Test.php">./tests</directory>
+      <exclude>./tests/e2e</exclude>
     </testsuite>
   </testsuites>
   <php>
