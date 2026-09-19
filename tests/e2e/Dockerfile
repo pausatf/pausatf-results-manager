@@ -1,4 +1,4 @@
-FROM php:8.5-cli
+FROM php:8.4-cli
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -25,7 +25,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 
 # Copy composer files first for caching
-COPY composer.json ./
+COPY composer.json composer.lock ./
 
 # Install PHP dependencies
 RUN composer install --no-scripts --no-autoloader
