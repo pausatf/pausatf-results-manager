@@ -9,6 +9,8 @@
 
 namespace PAUSATF\Results;
 
+use PAUSATF\Results\Integrations\HyTekImporter;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -213,8 +215,8 @@ class RaceDirectorPortal {
                         <div class="form-group">
                             <label for="upload-file">Results File *</label>
                             <input type="file" id="upload-file" name="results_file"
-                                   accept=".csv,.xlsx,.xls,.html,.htm,.hy3,.cl2,.zip" required>
-                            <p class="help-text">Supported formats: CSV, Excel, HTML, Hy-Tek (HY3, CL2), ZIP</p>
+                                   accept=".csv,.html,.htm,.hy3,.cl2,.hyv,.zip" required>
+                            <p class="help-text">Supported formats: CSV, HTML, Hy-Tek (HY3, CL2, HYV), ZIP</p>
                         </div>
 
                         <div class="form-group">
@@ -222,7 +224,6 @@ class RaceDirectorPortal {
                             <select id="upload-format" name="format">
                                 <option value="auto">Auto-detect</option>
                                 <option value="csv">CSV</option>
-                                <option value="excel">Excel (XLSX/XLS)</option>
                                 <option value="html">HTML</option>
                                 <option value="hytek">Hy-Tek</option>
                             </select>
@@ -535,21 +536,31 @@ class RaceDirectorPortal {
         // .htaccess. The accepted formats are inert data (spreadsheets, timing exports,
         // zip) plus HTML result pages, which are neutralized to a .txt store extension.
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        $allowed_ext = ['csv', 'xls', 'xlsx', 'html', 'htm', 'hy3', 'cl2', 'zip'];
+        $allowed_ext = ['csv', 'html', 'htm', 'hy3', 'cl2', 'hyv', 'zip'];
 
         if (!in_array($ext, $allowed_ext, true)) {
-            wp_send_json_error('Invalid file type');
+            wp_send_json_error('Invalid file type. Supported formats: CSV, HTML, HY3, CL2, HYV, and ZIP.');
         }
 
         // Defense in depth: reject a data file whose bytes are actually active markup or a
         // script (e.g. a webshell renamed to .csv). html/htm are legitimately markup and
         // are made inert by the .txt store extension, so they skip this check.
-        if (!in_array($ext, ['html', 'htm'], true) && function_exists('finfo_open')) {
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $real_mime = $finfo ? finfo_file($finfo, $file['tmp_name']) : '';
-            if ($finfo) {
-                finfo_close($finfo);
+        if (!in_array($ext, ['html', 'htm'], true)) {
+            if (!function_exists('finfo_open')) {
+                wp_send_json_error('File content inspection is unavailable');
             }
+
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            if (false === $finfo) {
+                wp_send_json_error('Unable to inspect uploaded file');
+            }
+
+            $real_mime = finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
+            if (false === $real_mime) {
+                wp_send_json_error('Unable to inspect uploaded file');
+            }
+
             $active_mimes = ['text/html', 'text/x-php', 'application/x-php', 'application/xhtml+xml',
                 'image/svg+xml', 'text/javascript', 'application/javascript'];
             if (in_array($real_mime, $active_mimes, true)) {
@@ -584,17 +595,25 @@ class RaceDirectorPortal {
         $replace = !empty($_POST['replace_existing']);
 
         // Import results
-        $importer = new ResultsImporter();
-        $result = $importer->import_file($target_path, [
+        $import_options = [
             'event_id' => $event_id,
             'format' => $format,
             'replace' => $replace,
-        ]);
+        ];
 
-        if ($result['success']) {
+        if ('csv' === $ext) {
+            $result = (new CSVImporter())->import_from_file($target_path, $import_options);
+        } elseif (in_array($ext, ['hy3', 'cl2', 'hyv', 'zip'], true)) {
+            $result = (new HyTekImporter())->import($target_path, $import_options);
+        } else {
+            $result = (new ResultsImporter())->import_from_file($target_path, $import_options);
+        }
+
+        if (!empty($result['success'])) {
+            $imported = (int) ($result['imported'] ?? $result['records_imported'] ?? 0);
             wp_send_json_success([
-                'message' => sprintf('Successfully imported %d results', $result['imported']),
-                'imported' => $result['imported'],
+                'message' => sprintf('Successfully imported %d results', $imported),
+                'imported' => $imported,
                 'event_id' => $event_id,
             ]);
         } else {
