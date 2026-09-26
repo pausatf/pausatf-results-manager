@@ -108,6 +108,25 @@ wp eval "
 );
 update_option('pausatf_test_event', \$event_data);
 
+\$existing_event = get_page_by_title(\$event_data['event_name'], OBJECT, 'pausatf_event');
+if (!\$existing_event) {
+    \$event_id = wp_insert_post(array(
+        'post_type' => 'pausatf_event',
+        'post_title' => \$event_data['event_name'],
+        'post_status' => 'publish',
+        'meta_input' => array(
+            '_pausatf_event_date' => \$event_data['event_date'],
+            '_pausatf_event_location' => \$event_data['event_location'],
+            '_event_date' => \$event_data['event_date'],
+            '_event_location' => \$event_data['event_location'],
+        ),
+    ));
+
+    if (!is_wp_error(\$event_id) && \$event_id > 0) {
+        wp_set_object_terms(\$event_id, \$event_data['event_type'], 'pausatf_event_type');
+    }
+}
+
 // Create test athlete
 \$athlete_data = array(
     'first_name' => 'Test',
