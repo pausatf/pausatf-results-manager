@@ -3,7 +3,7 @@ Contributors: thomasvincent
 Tags: results, athletics, track-and-field, race-results, importer
 Requires at least: 6.0
 Tested up to: 6.7
-Requires PHP: 8.1
+Requires PHP: 8.4
 Stable tag: 2.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html

@@ -8,18 +8,23 @@ on:
       - 'composer.lock'
       - 'package.json'
       - 'package-lock.json'
+  pull_request:
   release:
     types: [published]
   workflow_dispatch:
 
 permissions:
-  contents: write
-  security-events: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   sbom-php:
     name: Generate PHP SBOM
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -53,16 +58,11 @@ jobs:
             security-audit.json
           retention-days: 90
 
-      - name: Upload SBOM to GitHub Security
-        if: github.event_name == 'release'
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: sbom.cdx.json
-        continue-on-error: true
 
   sbom-npm:
     name: Generate npm SBOM
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -70,7 +70,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -98,8 +98,11 @@ jobs:
 
   combine-sboms:
     name: Combine SBOMs
+    permissions:
+      contents: write
     needs: [sbom-php, sbom-npm]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     if: github.event_name == 'release'
     steps:
       - name: Download PHP SBOM
@@ -115,13 +118,15 @@ jobs:
           path: sboms/npm
 
       - name: Create combined SBOM package
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           mkdir -p release-sbom
           cp sboms/php/*.json release-sbom/
           cp sboms/php/*.xml release-sbom/
           cp sboms/npm/*.json release-sbom/
           cp sboms/npm/*.xml release-sbom/
-          cd release-sbom && zip -r ../sbom-${{ github.ref_name }}.zip .
+          cd release-sbom && zip -r "../sbom-${RELEASE_TAG}.zip" .
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2

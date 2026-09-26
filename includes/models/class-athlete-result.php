@@ -38,12 +38,12 @@ final class AthleteResult implements Arrayable, Jsonable
     /**
      * Athlete name with trimming
      */
-    public string $athleteName {
+    public string $athleteName = '' {
         get => $this->athleteName;
         set(string $value) {
             $this->athleteName = trim($value);
         }
-    } = '';
+    }
 
     /**
      * Athlete post ID (if linked)
@@ -53,7 +53,7 @@ final class AthleteResult implements Arrayable, Jsonable
     /**
      * Place/position with validation
      */
-    public ?int $place {
+    public ?int $place = null {
         get => $this->place;
         set(?int $value) {
             if ($value !== null && $value < 1) {
@@ -61,7 +61,7 @@ final class AthleteResult implements Arrayable, Jsonable
             }
             $this->place = $value;
         }
-    } = null;
+    }
 
     /**
      * Overall place (may differ from division place)
@@ -81,7 +81,7 @@ final class AthleteResult implements Arrayable, Jsonable
     /**
      * Gender
      */
-    public string $gender {
+    public string $gender = '' {
         get => $this->gender;
         set(string $value) {
             $normalized = strtoupper(trim($value));
@@ -90,12 +90,12 @@ final class AthleteResult implements Arrayable, Jsonable
             }
             $this->gender = $normalized;
         }
-    } = '';
+    }
 
     /**
      * Age at time of event
      */
-    public ?int $athleteAge {
+    public ?int $athleteAge = null {
         get => $this->athleteAge;
         set(?int $value) {
             if ($value !== null && ($value < 1 || $value > 120)) {
@@ -103,7 +103,7 @@ final class AthleteResult implements Arrayable, Jsonable
             }
             $this->athleteAge = $value;
         }
-    } = null;
+    }
 
     /**
      * Bib number
@@ -128,7 +128,7 @@ final class AthleteResult implements Arrayable, Jsonable
     /**
      * Finish time in seconds with validation
      */
-    public ?float $timeSeconds {
+    public ?float $timeSeconds = null {
         get => $this->timeSeconds;
         set(?float $value) {
             if ($value !== null && $value < 0) {
@@ -136,7 +136,7 @@ final class AthleteResult implements Arrayable, Jsonable
             }
             $this->timeSeconds = $value;
         }
-    } = null;
+    }
 
     /**
      * Formatted time string (virtual computed property)
@@ -201,7 +201,7 @@ final class AthleteResult implements Arrayable, Jsonable
     /**
      * Points earned
      */
-    public ?float $points {
+    public ?float $points = null {
         get => $this->points;
         set(?float $value) {
             if ($value !== null && $value < 0) {
@@ -209,12 +209,12 @@ final class AthleteResult implements Arrayable, Jsonable
             }
             $this->points = $value;
         }
-    } = null;
+    }
 
     /**
      * Prize money earned
      */
-    public ?float $payout {
+    public ?float $payout = null {
         get => $this->payout;
         set(?float $value) {
             if ($value !== null && $value < 0) {
@@ -222,12 +222,12 @@ final class AthleteResult implements Arrayable, Jsonable
             }
             $this->payout = $value;
         }
-    } = null;
+    }
 
     /**
      * Status (finished, DNF, DNS, DQ)
      */
-    public string $status {
+    public string $status = 'finished' {
         get => $this->status;
         set(string $value) {
             $valid = ['finished', 'dnf', 'dns', 'dq', ''];
@@ -237,7 +237,7 @@ final class AthleteResult implements Arrayable, Jsonable
             }
             $this->status = $normalized ?: 'finished';
         }
-    } = 'finished';
+    }
 
     /**
      * Did the athlete finish?
@@ -273,7 +273,7 @@ final class AthleteResult implements Arrayable, Jsonable
     /**
      * Confidence score for parsed results (0.0-1.0)
      */
-    public ?float $confidence {
+    public ?float $confidence = null {
         get => $this->confidence;
         set(?float $value) {
             if ($value !== null && ($value < 0.0 || $value > 1.0)) {
@@ -281,7 +281,7 @@ final class AthleteResult implements Arrayable, Jsonable
             }
             $this->confidence = $value;
         }
-    } = null;
+    }
 
     /**
      * Created timestamp
