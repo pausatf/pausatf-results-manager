@@ -25,7 +25,7 @@ class FeatureManagementCest
     public function coreFeaturesCannotBeDisabled(AcceptanceTester $I): void
     {
         $I->amOnPage('/wp-admin/admin.php?page=pausatf-results-settings&tab=features');
-        $I->seeElement('input[type="hidden"][name="features[core_results]"]');
-        $I->seeElement('input[type="hidden"][name="features[core_athletes]"]');
+        $I->seeElement('.pausatf-feature-card.core');
+        $I->dontSeeElement('.pausatf-feature-card.core input[type="checkbox"]');
     }
 }

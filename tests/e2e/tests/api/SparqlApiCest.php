@@ -117,7 +117,7 @@ class SparqlApiCest
         $query = '
             PREFIX schema: <http://schema.org/>
 
-            ASK WHERE {
+            ASK {
                 ?event a schema:SportsEvent .
             }
         ';
@@ -218,7 +218,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'application/sparql-results+xml');
-        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query, 'format' => 'xml']);
 
         $I->seeResponseCodeIs(200);
         $I->seeHttpHeader('Content-Type', 'application/sparql-results+xml');
@@ -232,7 +232,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'text/csv');
-        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query, 'format' => 'csv']);
 
         $I->seeResponseCodeIs(200);
         $I->seeHttpHeader('Content-Type', 'text/csv');

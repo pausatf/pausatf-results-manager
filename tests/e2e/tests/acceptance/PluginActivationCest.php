@@ -32,7 +32,7 @@ class PluginActivationCest
         $I->wantTo('verify the plugin menu appears in admin sidebar');
 
         $I->amOnPage('/wp-admin/');
-        $I->see('PAUSATF Results', '#adminmenu');
+        $I->seeElement('#toplevel_page_pausatf-results');
     }
 
     public function canAccessPluginDashboard(AcceptanceTester $I): void
