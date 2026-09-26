@@ -215,8 +215,17 @@ class ResultsImporter {
      * Create or update event post
      */
     private function create_or_update_event(ParsedResults $parsed, array $options): int|\WP_Error {
-        // Check for existing event
-        $existing = $this->find_existing_event($parsed, $options);
+        // An upload from the Race Director portal must update the selected event,
+        // rather than silently creating a separate event from parsed HTML.
+        if (!empty($options['event_id'])) {
+            $event = get_post((int) $options['event_id']);
+            if (!$event || 'pausatf_event' !== $event->post_type) {
+                return new \WP_Error('invalid_event', 'The selected event is invalid');
+            }
+            $existing = (int) $event->ID;
+        } else {
+            $existing = $this->find_existing_event($parsed, $options);
+        }
 
         $post_data = [
             'post_type' => 'pausatf_event',
