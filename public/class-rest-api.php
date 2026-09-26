@@ -324,7 +324,7 @@ class RestAPI {
     }
 }
 
-// Initialize
-add_action('init', function() {
-    RestAPI::instance();
-});
+// The plugin loads this file from its `init` callback. Instantiate the API
+// immediately so its `rest_api_init` callback is registered before WordPress
+// builds the REST route table for the current request.
+RestAPI::instance();

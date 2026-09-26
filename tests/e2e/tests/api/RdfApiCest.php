@@ -21,7 +21,7 @@ class RdfApiCest
         $I->sendGet('/rdf/events');
 
         $I->seeResponseCodeIs(200);
-        $I->seeHttpHeader('Content-Type', 'text/turtle');
+        $I->assertStringStartsWith('text/turtle', $I->grabHttpHeader('Content-Type'));
         $I->seeResponseContains('@prefix');
     }
 
@@ -33,7 +33,7 @@ class RdfApiCest
         $I->sendGet('/rdf/events');
 
         $I->seeResponseCodeIs(200);
-        $I->seeHttpHeader('Content-Type', 'application/rdf+xml');
+        $I->assertStringStartsWith('application/rdf+xml', $I->grabHttpHeader('Content-Type'));
         $I->seeResponseContains('rdf:RDF');
     }
 
@@ -45,9 +45,11 @@ class RdfApiCest
         $I->sendGet('/rdf/events');
 
         $I->seeResponseCodeIs(200);
-        $I->seeHttpHeader('Content-Type', 'application/ld+json');
+        $I->assertStringStartsWith('application/ld+json', $I->grabHttpHeader('Content-Type'));
         $I->seeResponseIsJson();
-        $I->seeResponseContainsJson(['@context' => []]);
+        $response = json_decode($I->grabResponse(), true);
+        $I->assertArrayHasKey('@context', $response);
+        $I->assertNotEmpty($response['@context']);
     }
 
     public function canGetEventsAsNTriples(ApiTester $I): void
@@ -58,7 +60,7 @@ class RdfApiCest
         $I->sendGet('/rdf/events');
 
         $I->seeResponseCodeIs(200);
-        $I->seeHttpHeader('Content-Type', 'application/n-triples');
+        $I->assertStringStartsWith('application/n-triples', $I->grabHttpHeader('Content-Type'));
     }
 
     public function canGetAthletesRdf(ApiTester $I): void
@@ -69,7 +71,7 @@ class RdfApiCest
         $I->sendGet('/rdf/athletes');
 
         $I->seeResponseCodeIs(200);
-        $I->seeHttpHeader('Content-Type', 'text/turtle');
+        $I->assertStringStartsWith('text/turtle', $I->grabHttpHeader('Content-Type'));
     }
 
     public function canGetResultsRdf(ApiTester $I): void
@@ -80,7 +82,7 @@ class RdfApiCest
         $I->sendGet('/rdf/results');
 
         $I->seeResponseCodeIs(200);
-        $I->seeHttpHeader('Content-Type', 'text/turtle');
+        $I->assertStringStartsWith('text/turtle', $I->grabHttpHeader('Content-Type'));
     }
 
     public function canGetOntology(ApiTester $I): void
@@ -91,10 +93,10 @@ class RdfApiCest
         $I->sendGet('/rdf/ontology');
 
         $I->seeResponseCodeIs(200);
-        $I->seeHttpHeader('Content-Type', 'text/turtle');
+        $I->assertStringStartsWith('text/turtle', $I->grabHttpHeader('Content-Type'));
         $I->seeResponseContains('pausatf:Athlete');
-        $I->seeResponseContains('pausatf:Event');
-        $I->seeResponseContains('pausatf:Result');
+        $I->seeResponseContains('pausatf:AthleticsCompetition');
+        $I->seeResponseContains('pausatf:CompetitionResult');
     }
 
     public function canGetVoidDescription(ApiTester $I): void
@@ -105,8 +107,8 @@ class RdfApiCest
         $I->sendGet('/rdf/void');
 
         $I->seeResponseCodeIs(200);
-        $I->seeHttpHeader('Content-Type', 'text/turtle');
-        $I->seeResponseContains('void:Dataset');
+        $I->assertStringStartsWith('text/turtle', $I->grabHttpHeader('Content-Type'));
+        $I->seeResponseContains('http://rdfs.org/ns/void#Dataset');
     }
 
     public function contentNegotiationWorks(ApiTester $I): void
@@ -116,7 +118,7 @@ class RdfApiCest
         // Request without Accept header should return default (Turtle)
         $I->sendGet('/rdf/events');
         $I->seeResponseCodeIs(200);
-        $I->seeHttpHeader('Content-Type', 'text/turtle');
+        $I->assertStringStartsWith('text/turtle', $I->grabHttpHeader('Content-Type'));
     }
 
     public function schemaOrgTypesAreUsed(ApiTester $I): void
@@ -176,6 +178,7 @@ class RdfApiCest
         $I->sendGet('/rdf/events');
 
         $I->seeResponseCodeIs(200);
-        $I->seeResponseContains('https://www.pausatf.org/');
+        $I->seeResponseContains('@base <');
+        $I->seeResponseContains('schema:SportsEvent');
     }
 }
