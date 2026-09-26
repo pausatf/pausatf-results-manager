@@ -18,7 +18,7 @@ class SparqlApiCest
         $I->wantTo('verify SPARQL endpoint is available');
 
         $I->haveHttpHeader('Accept', 'application/sparql-results+json');
-        $I->sendGet('/sparql');
+        $I->sendGet('/wp-json/pausatf/v1/sparql', ['query' => 'ASK { ?s ?p ?o }']);
         $I->seeResponseCodeIsSuccessful();
     }
 
@@ -30,7 +30,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'application/sparql-results+json');
-        $I->sendPost('/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
 
         $I->seeResponseCodeIs(200);
         $I->seeResponseIsJson();
@@ -55,7 +55,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'application/sparql-results+json');
-        $I->sendPost('/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
 
         $I->seeResponseCodeIs(200);
         $I->seeResponseIsJson();
@@ -79,7 +79,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'application/sparql-results+json');
-        $I->sendPost('/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
 
         $I->seeResponseCodeIs(200);
         $I->seeResponseIsJson();
@@ -104,7 +104,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'application/sparql-results+json');
-        $I->sendPost('/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
 
         $I->seeResponseCodeIs(200);
         $I->seeResponseIsJson();
@@ -124,7 +124,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'application/sparql-results+json');
-        $I->sendPost('/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
 
         $I->seeResponseCodeIs(200);
         $I->seeResponseIsJson();
@@ -143,7 +143,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'text/turtle');
-        $I->sendPost('/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
 
         $I->seeResponseCodeIs(200);
     }
@@ -167,7 +167,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'application/sparql-results+json');
-        $I->sendPost('/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
 
         $I->seeResponseCodeIs(200);
         $I->seeResponseIsJson();
@@ -191,7 +191,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'application/sparql-results+json');
-        $I->sendPost('/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
 
         $I->seeResponseCodeIs(200);
         $I->seeResponseIsJson();
@@ -205,7 +205,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'application/sparql-results+json');
-        $I->sendPost('/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
 
         $I->seeResponseCodeIs(400);
     }
@@ -218,7 +218,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'application/sparql-results+xml');
-        $I->sendPost('/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
 
         $I->seeResponseCodeIs(200);
         $I->seeHttpHeader('Content-Type', 'application/sparql-results+xml');
@@ -232,7 +232,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'text/csv');
-        $I->sendPost('/sparql', ['query' => $query]);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query]);
 
         $I->seeResponseCodeIs(200);
         $I->seeHttpHeader('Content-Type', 'text/csv');
@@ -244,7 +244,7 @@ class SparqlApiCest
 
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->haveHttpHeader('Accept', 'application/sparql-results+json');
-        $I->sendPost('/sparql', ['query' => '']);
+        $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => '']);
 
         $I->seeResponseCodeIs(400);
     }

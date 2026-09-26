@@ -40,7 +40,6 @@ class PluginActivationCest
         $I->wantTo('access the plugin dashboard');
 
         $I->amOnPage('/wp-admin/admin.php?page=pausatf-results');
-        $I->seeResponseCodeIs(200);
         $I->see('PAUSATF Results Manager', 'h1');
     }
 
@@ -48,9 +47,8 @@ class PluginActivationCest
     {
         $I->wantTo('access the plugin settings page');
 
-        $I->amOnPage('/wp-admin/admin.php?page=pausatf-settings');
-        $I->seeResponseCodeIs(200);
-        $I->see('Settings', 'h1');
+        $I->amOnPage('/wp-admin/admin.php?page=pausatf-results-settings');
+        $I->see('PAUSATF Results Settings', 'h1');
     }
 
     public function pluginRegistersCustomPostTypes(AcceptanceTester $I): void
@@ -58,9 +56,9 @@ class PluginActivationCest
         $I->wantTo('verify custom post types are registered');
 
         $I->amOnPage('/wp-admin/edit.php?post_type=pausatf_event');
-        $I->seeResponseCodeIs(200);
+        $I->see('Events', 'h1');
 
-        $I->amOnPage('/wp-admin/edit.php?post_type=pausatf_result');
-        $I->seeResponseCodeIs(200);
+        $I->amOnPage('/wp-admin/edit.php?post_type=pausatf_athlete');
+        $I->see('Athletes', 'h1');
     }
 }

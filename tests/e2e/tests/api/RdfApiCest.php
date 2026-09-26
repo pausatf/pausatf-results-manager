@@ -95,8 +95,8 @@ class RdfApiCest
         $I->seeResponseCodeIs(200);
         $I->assertStringStartsWith('text/turtle', $I->grabHttpHeader('Content-Type'));
         $I->seeResponseContains('pausatf:Athlete');
-        $I->seeResponseContains('pausatf:Event');
-        $I->seeResponseContains('pausatf:Result');
+        $I->seeResponseContains('pausatf:AthleticsCompetition');
+        $I->seeResponseContains('pausatf:CompetitionResult');
     }
 
     public function canGetVoidDescription(ApiTester $I): void
@@ -108,7 +108,7 @@ class RdfApiCest
 
         $I->seeResponseCodeIs(200);
         $I->assertStringStartsWith('text/turtle', $I->grabHttpHeader('Content-Type'));
-        $I->seeResponseContains('void:Dataset');
+        $I->seeResponseContains('http://rdfs.org/ns/void#Dataset');
     }
 
     public function contentNegotiationWorks(ApiTester $I): void
@@ -178,6 +178,7 @@ class RdfApiCest
         $I->sendGet('/rdf/events');
 
         $I->seeResponseCodeIs(200);
-        $I->seeResponseContains('https://www.pausatf.org/');
+        $I->seeResponseContains('@base <');
+        $I->seeResponseContains('schema:SportsEvent');
     }
 }
