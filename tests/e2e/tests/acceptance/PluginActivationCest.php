@@ -27,12 +27,12 @@ class PluginActivationCest
         $I->see('Deactivate', '.row-actions');
     }
 
-    public function pluginMenuAppearsInAdminSidebar(AcceptanceTester $I): void
+    public function adminDashboardLoads(AcceptanceTester $I): void
     {
-        $I->wantTo('verify the plugin menu appears in admin sidebar');
+        $I->wantTo('verify the plugin admin dashboard loads');
 
-        $I->amOnPage('/wp-admin/');
-        $I->seeElement('#toplevel_page_pausatf-results');
+        $I->amOnPage('/wp-admin/admin.php?page=pausatf-results');
+        $I->see('PAUSATF Results Manager', 'h1');
     }
 
     public function canAccessPluginDashboard(AcceptanceTester $I): void

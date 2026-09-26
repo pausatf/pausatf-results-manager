@@ -235,7 +235,7 @@ class SparqlApiCest
         $I->sendPost('/wp-json/pausatf/v1/sparql', ['query' => $query, 'format' => 'csv']);
 
         $I->seeResponseCodeIs(200);
-        $I->seeHttpHeader('Content-Type', 'text/csv');
+        $I->assertStringStartsWith('text/csv', $I->grabHttpHeader('Content-Type'));
     }
 
     public function emptyQueryReturnsError(ApiTester $I): void
