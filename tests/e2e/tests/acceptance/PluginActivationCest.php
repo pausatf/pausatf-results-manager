@@ -56,9 +56,11 @@ class PluginActivationCest
         $I->wantTo('verify custom post types are registered');
 
         $I->amOnPage('/wp-admin/edit.php?post_type=pausatf_event');
-        $I->see('Events', 'h1');
+        $I->waitForElementVisible('h1.wp-heading-inline', 10);
+        $I->see('Events', 'h1.wp-heading-inline');
 
         $I->amOnPage('/wp-admin/edit.php?post_type=pausatf_athlete');
-        $I->see('Athletes', 'h1');
+        $I->waitForElementVisible('h1.wp-heading-inline', 10);
+        $I->see('Athletes', 'h1.wp-heading-inline');
     }
 }
