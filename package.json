@@ -44,5 +44,10 @@
         "languages/",
         "pausatf-results.php",
         "readme.txt"
-    ]
+    ],
+    "overrides": {
+        "markdownlint": {
+            "markdown-it": "14.3.2"
+        }
+    }
 }
