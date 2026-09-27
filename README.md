@@ -90,6 +90,8 @@ Data spans 1994-2025 with varying HTML formats.
 
 ## Development
 
+JavaScript development tooling requires Node.js 22.22.2 or newer and npm 10 or newer. Install the development dependencies with `npm ci`. The npm scripts provide build, lint, and Jest unit-test commands (`npm run build`, `npm run lint`, and `npm run test:unit`).
+
 ### Directory Structure
 
 ```

@@ -13,7 +13,7 @@
         "lint:css": "wp-scripts lint-style ./assets/css",
         "lint": "npm run lint:js && npm run lint:css",
         "format": "wp-scripts format ./assets/js",
-        "test:unit": "wp-scripts test-unit-js",
+        "test:unit": "wp-scripts test-unit-jest --passWithNoTests",
         "sbom": "cyclonedx-npm --output-format JSON --output-file sbom.npm.cdx.json",
         "sbom:xml": "cyclonedx-npm --output-format XML --output-file sbom.npm.cdx.xml",
         "security:audit": "npm audit --json > security-audit.npm.json || true",
@@ -21,15 +21,16 @@
     },
     "devDependencies": {
         "@cyclonedx/cyclonedx-npm": "^6.0.0",
-        "@wordpress/eslint-plugin": "^25.9.0",
-        "@wordpress/scripts": "^34.1.0",
+        "@types/node": "^22.0.0",
+        "@wordpress/eslint-plugin": "^27.0.0",
+        "@wordpress/scripts": "^36.0.0",
         "eslint": "^9.39.5",
         "prettier": "^3.3.0",
         "react": "^18.3.1",
         "react-dom": "^18.3.1"
     },
     "engines": {
-        "node": ">=20.0.0",
+        "node": ">=22.22.2",
         "npm": ">=10.0.0"
     },
     "browserslist": [
