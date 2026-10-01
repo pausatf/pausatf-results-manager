@@ -29,11 +29,14 @@ class AcceptanceTester extends \Codeception\Actor
         $this->amOnPage('/wp-login.php');
         $this->waitForJS('return document.readyState === "complete"', 30);
         $this->waitForElementVisible('#user_pass', 10);
-        $this->fillField('#user_login', getenv('WP_ADMIN_USERNAME') ?: 'admin');
-        $this->fillField('#user_pass', getenv('WP_ADMIN_PASSWORD') ?: 'admin');
-        // Submit only once browser-side initialization has retained the input.
-        $this->waitForJS('return document.querySelector("#user_pass").value.length > 0', 10);
-        $this->click('#wp-submit');
+        // Set and submit atomically: ChromeDriver intermittently drops password
+        // sendKeys input. Authentication still uses WordPress's real login POST.
+        $this->executeJS(
+            'document.querySelector("#user_login").value = arguments[0];'
+            . 'document.querySelector("#user_pass").value = arguments[1];'
+            . 'document.querySelector("#loginform").requestSubmit(document.querySelector("#wp-submit"));',
+            [getenv('WP_ADMIN_USERNAME') ?: 'admin', getenv('WP_ADMIN_PASSWORD') ?: 'admin']
+        );
         $this->waitForElement('#wpadminbar', 10);
     }
 
