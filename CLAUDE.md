@@ -12,9 +12,9 @@ WordPress plugin to import, manage, and display PA-USATF legacy competition resu
 | WordPress | 6.0+ |
 | Testing | PHPUnit 11, Codeception 5 (E2E) |
 | Linting | PHPCS with WPCS 3.1, PHPStan (WordPress extension) |
-| JS Build | @wordpress/scripts 28 |
+| JS Build | @wordpress/scripts 36 |
 | JS Lint | @wordpress/eslint-plugin |
-| Node | >= 20 |
+| Node | >= 22.22.2, selected through mise |
 | SBOM | CycloneDX (PHP + npm) |
 
 ## Standards

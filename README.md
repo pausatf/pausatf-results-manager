@@ -1,5 +1,24 @@
 # PAUSATF Results Manager
 
+## Dependency compatibility and verification
+
+Development uses `@wordpress/scripts` 36, React/React DOM 18.3.1 and ESLint 9.39.5 constraints.
+React 19 and ESLint 10 remain deferred until the affected peers support them; targeted Dependabot ignores retain
+supported minor/patch updates. The ESLint override is scoped to `@wordpress/scripts`.
+Do not install with forced or legacy peer resolution. The lockfile is authoritative for installed versions.
+`@types/node` tracks 26.6.3 or newer; this type package does not change the Node runtime floor of 22.22.2.
+
+```bash
+mise exec node@22.22.2 -- npm ci
+mise exec node@22.22.2 -- npm run build
+mise exec node@22.22.2 -- npm run lint
+mise exec node@22.22.2 -- npm run test:unit
+```
+
+`test:unit` permits an empty Jest suite, so success alone does not prove unit coverage.
+PHPUnit and browser/API verification use the separate PHP and [E2E harnesses](tests/e2e/README.md).
+Repository CI and dependency validation do not establish production deployment.
+
 WordPress plugin to import, manage, and display PAUSATF (Pacific Association USA Track & Field) legacy competition results with full athlete tracking.
 
 ## Features
@@ -38,7 +57,7 @@ WordPress plugin to import, manage, and display PAUSATF (Pacific Association USA
 ## Requirements
 
 - WordPress 6.0+
-- PHP 8.0+
+- PHP 8.4+ (Composer requirement and CI runtime)
 
 ## Usage
 

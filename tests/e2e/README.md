@@ -1,5 +1,14 @@
 # PAUSATF Results Manager E2E Tests
 
+## Current CI harness
+
+`.github/workflows/e2e-tests.yml` runs native API and acceptance suites on pushes/PRs to main and develop.
+It selects PHP 8.4, Node 22, MySQL 8.0 and WordPress 7.1.1, starts ChromeDriver and uses an explicit PHP router
+for REST, SPARQL and RDF paths. Readiness waits are bounded; suite output and server/browser logs are uploaded.
+The Docker E2E job runs only on manual workflow dispatch. Its logs are a separate artifact.
+The examples below describe the local harness; verify available services and configuration before running them.
+Select host language runtimes through mise. CI fixture results are not production deployment/restore evidence.
+
 End-to-end tests for the PAUSATF Results Manager WordPress plugin using Docker and Codeception.
 
 ## Prerequisites
