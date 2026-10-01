@@ -69,8 +69,16 @@ jobs:
 
       - name: Start ChromeDriver
         run: |
-          chromedriver --port=4444 --url-base=/wd/hub &
-          sleep 3
+          nohup chromedriver --port=4444 --url-base=/wd/hub > /tmp/chromedriver.log 2>&1 &
+          ready=0
+          for _attempt in {1..30}; do
+            if curl --fail --silent --connect-timeout 2 --max-time 5 http://127.0.0.1:4444/wd/hub/status >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = 1
 
       - name: Download WordPress
         run: |
@@ -140,8 +148,16 @@ jobs:
           $_SERVER['SCRIPT_NAME'] = '/index.php';
           require __DIR__ . '/index.php';
           PHP
-          php -S 0.0.0.0:8080 router.php &
-          sleep 5
+          PHP_CLI_SERVER_WORKERS=4 nohup php -S 0.0.0.0:8080 router.php > /tmp/wordpress-server.log 2>&1 &
+          ready=0
+          for _attempt in {1..30}; do
+            if curl --fail --silent --connect-timeout 2 --max-time 5 http://127.0.0.1:8080/wp-login.php >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = 1
 
       - name: Cache Composer dependencies
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -185,6 +201,8 @@ jobs:
           path: |
             tests/e2e/tests/_output/
             /tmp/wordpress/wp-content/debug.log
+            /tmp/wordpress-server.log
+            /tmp/chromedriver.log
           retention-days: 7
 
   docker-e2e-tests:
