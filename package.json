@@ -48,6 +48,9 @@
         "readme.txt"
     ],
     "overrides": {
+        "@wordpress/scripts": {
+            "eslint": "^9.39.5"
+        },
         "markdownlint": {
             "markdown-it": "14.3.2"
         },

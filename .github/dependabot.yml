@@ -41,6 +41,15 @@ updates:
   # JavaScript build tooling
   - package-ecosystem: "npm"
     directory: "/"
+    # Revisit when use-memo-one supports React 19 and all lint plugins support ESLint 10.
+    # Minor/patch version updates to the supported majors remain enabled.
+    ignore:
+      - dependency-name: "react"
+        versions: ["19.x"]
+      - dependency-name: "react-dom"
+        versions: ["19.x"]
+      - dependency-name: "eslint"
+        versions: ["10.x"]
     schedule:
       interval: "weekly"
       day: "monday"
