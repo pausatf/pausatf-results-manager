@@ -23,7 +23,7 @@
         "@cyclonedx/cyclonedx-npm": "^6.0.0",
         "@types/node": "^26.6.5",
         "@wordpress/eslint-plugin": "^27.1.0",
-        "@wordpress/scripts": "^36.1.0",
+        "@wordpress/scripts": "^37.0.0",
         "eslint": "^9.39.5",
         "prettier": "^3.9.10",
         "react": "^18.3.1",
