@@ -14,6 +14,18 @@ if (!function_exists('__')) {
     }
 }
 
+defined('ARRAY_A') || define('ARRAY_A', 'ARRAY_A');
+
+if (!function_exists('add_shortcode')) {
+    function add_shortcode(...$args): void {
+    }
+}
+
+if (!function_exists('add_action')) {
+    function add_action(...$args): void {
+    }
+}
+
 if (!function_exists('esc_html')) {
     function esc_html($text) {
         return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');

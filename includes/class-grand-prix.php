@@ -13,6 +13,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once __DIR__ . '/class-grand-prix-scoring.php';
+
 /**
  * Grand Prix series management
  */
@@ -49,7 +51,7 @@ class GrandPrix {
             description text DEFAULT NULL,
             scoring_system enum('place','time','age_graded','custom') DEFAULT 'place',
             place_points text DEFAULT NULL,
-            min_races int DEFAULT 3,
+            min_races int DEFAULT 0,
             max_races int DEFAULT NULL,
             drop_worst int DEFAULT 0,
             bonus_points text DEFAULT NULL,
@@ -113,23 +115,7 @@ class GrandPrix {
     public function create_series(array $data): int|false {
         global $wpdb;
 
-        $defaults = [
-            'name' => '',
-            'slug' => '',
-            'season_year' => (int) date('Y'),
-            'scoring_system' => 'place',
-            'place_points' => json_encode([100, 90, 82, 75, 69, 64, 60, 56, 53, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32, 30]),
-            'min_races' => 3,
-            'max_races' => null,
-            'drop_worst' => 0,
-            'bonus_points' => json_encode([
-                'age_record' => 50,
-                'association_record' => 100,
-                'pr' => 10,
-            ]),
-            'divisions' => json_encode(['OPEN', 'M40', 'M50', 'M60', 'M70', 'W40', 'W50', 'W60', 'W70']),
-            'status' => 'active',
-        ];
+        $defaults = GrandPrixScoring::series_defaults();
 
         $data = array_merge($defaults, $data);
 
@@ -220,18 +206,8 @@ class GrandPrix {
      * Calculate points for a place
      */
     public function calculate_place_points(int $place, array $series): float {
-        $points_table = $series['place_points'] ?? [];
-
-        if ($place <= 0) {
-            return 0;
-        }
-
-        if (isset($points_table[$place - 1])) {
-            return (float) $points_table[$place - 1];
-        }
-
-        // For places beyond the table, give 1 point
-        return 1;
+        // PA scores nothing beyond the last listed place.
+        return GrandPrixScoring::points_for_place($place, $series['place_points'] ?? []);
     }
 
     /**
@@ -272,13 +248,14 @@ class GrandPrix {
         // Group results by athlete
         $athletes = [];
         foreach ($results as $result) {
-            $key = $result['athlete_name'] . '|' . ($result['division'] ?? 'OPEN');
+            $gender = GrandPrixScoring::resolve_gender($result['sex'] ?? null, $result['division'] ?? null);
+            $key = $result['athlete_name'] . '|' . ($result['division'] ?? 'OPEN') . '|' . $gender;
             if (!isset($athletes[$key])) {
                 $athletes[$key] = [
                     'name' => $result['athlete_name'],
                     'athlete_id' => $result['athlete_id'],
                     'division' => $result['division'] ?? 'OPEN',
-                    'gender' => $this->infer_gender($result['division']),
+                    'gender' => $gender,
                     'results' => [],
                     'total_points' => 0,
                 ];
@@ -308,7 +285,7 @@ class GrandPrix {
             // Sort descending and drop worst
             rsort($points_list);
 
-            if ($series['drop_worst'] > 0 && count($points_list) > $series['min_races']) {
+            if ($series['drop_worst'] > 0 && count($points_list) > max((int) $series['drop_worst'], (int) $series['min_races'])) {
                 $points_list = array_slice($points_list, 0, -$series['drop_worst']);
             }
 
@@ -320,6 +297,8 @@ class GrandPrix {
             $athlete['total_points'] = array_sum($points_list);
             $athlete['races_completed'] = count($athlete['results']);
         }
+        // Break the reference: a later foreach over $athlete would otherwise overwrite the last athlete.
+        unset($athlete);
 
         // Clear existing standings
         $wpdb->delete($this->standings_table, ['series_id' => $series_id]);
@@ -329,23 +308,18 @@ class GrandPrix {
         $count = 0;
 
         foreach ($divisions as $division) {
-            foreach (['M', 'F'] as $gender) {
-                $division_athletes = array_filter($athletes, function ($a) use ($division, $gender) {
-                    return $a['division'] === $division && $a['gender'] === $gender;
-                });
+            // 'X' holds results whose sex is neither recorded nor printed in the division.
+            foreach (['M', 'F', 'X'] as $gender) {
+                $division_athletes = array_values(array_filter($athletes, function ($a) use ($division, $gender, $series) {
+                    return $a['division'] === $division && $a['gender'] === $gender
+                        && $a['races_completed'] >= (int) $series['min_races'];
+                }));
 
-                // Sort by points
                 usort($division_athletes, fn($a, $b) => $b['total_points'] <=> $a['total_points']);
+                $ranks = GrandPrixScoring::competition_ranks(array_column($division_athletes, 'total_points'));
 
-                // Assign ranks and insert
-                $rank = 0;
-                foreach ($division_athletes as $athlete) {
-                    // Check minimum races
-                    if ($athlete['races_completed'] < $series['min_races']) {
-                        continue;
-                    }
-
-                    $rank++;
+                foreach ($division_athletes as $index => $athlete) {
+                    $rank = $ranks[$index];
                     $count++;
 
                     $wpdb->insert($this->standings_table, [
@@ -364,21 +338,6 @@ class GrandPrix {
         }
 
         return $count;
-    }
-
-    /**
-     * Infer gender from division string
-     */
-    private function infer_gender(?string $division): string {
-        if (!$division) {
-            return 'M';
-        }
-
-        if (preg_match('/^[WF]/i', $division) || stripos($division, 'women') !== false) {
-            return 'F';
-        }
-
-        return 'M';
     }
 
     /**
