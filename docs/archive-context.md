@@ -74,7 +74,7 @@ Insert the version-specific shortcode into a WordPress page:
 [pausatf_archive_release id="123"]
 ```
 
-Individual tables lead with the recorded name and mark; ranking tables lead with the name and place. Narrow screens wrap names and scroll the remaining context within the table. Keyboard users can focus the labelled table region and scroll horizontally.
+Individual tables lead with the recorded name and mark, followed by separate overall, sex-category and division place columns. Divisions are called age divisions only when the source supplies age context. These summaries use only unambiguous published places; multiple source scopes direct readers to the expandable place details. Calculated places remain separate, with readable category labels and origin information. Narrow screens wrap names and scroll the remaining context within the table. Keyboard users can focus the labelled table region and scroll horizontally.
 
 Public REST endpoints expose only published versions:
 

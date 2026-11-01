@@ -92,7 +92,7 @@ final class ArchiveViewTest extends TestCase
         $xpath = $this->render();
         self::assertSame(1, $this->nodes($xpath, '//section/h2')->length);
         self::assertSame('gimme-shelter-5k-1996', $this->text($xpath, '//section/h2'));
-        self::assertSame(13, $this->nodes($xpath, '//table[caption="Performances"]/thead/tr/th[@scope="col"]')->length);
+        self::assertSame(16, $this->nodes($xpath, '//table[caption="Performances"]/thead/tr/th[@scope="col"]')->length);
         self::assertSame(2, $this->nodes($xpath, '//table[caption="Performances"]/tbody/tr')->length);
         self::assertSame('Christophe Impens, Albuqu', $this->cell($xpath, 'Performances', 1, 'Name as recorded'));
         self::assertSame('Matt Guisto, Albuquerque', $this->cell($xpath, 'Performances', 2, 'Name as recorded'));
@@ -106,6 +106,9 @@ final class ArchiveViewTest extends TestCase
         self::assertSame('1', $this->cell($xpath, 'Rankings', 1, 'Place'));
         self::assertSame('2', $this->cell($xpath, 'Rankings', 2, 'Place'));
         self::assertSame('Source', $this->cell($xpath, 'Rankings', 1, 'Origin'));
+        self::assertSame('1', $this->cell($xpath, 'Performances', 1, 'Overall place'));
+        self::assertSame('2', $this->cell($xpath, 'Performances', 2, 'Overall place'));
+        self::assertSame('Overall', $this->cell($xpath, 'Rankings', 1, 'Place category'));
     }
 
     public function testPrimaryResultsLeadTheirTablesAndScrollingRegionsAreKeyboardReachable(): void
@@ -119,6 +122,46 @@ final class ArchiveViewTest extends TestCase
             self::assertSame(1, $regions->length);
             self::assertSame($caption, $regions->item(0)->getAttribute('aria-label'));
         }
+    }
+
+    public function testPublishedPlaceCategoriesAreSeparateAndHumanReadable(): void
+    {
+        $this->release['entities']['divisions'][] = ['key' => 'age-division', 'published_label' => 'M25-29', 'age_band' => '25-29'];
+        $this->release['entities']['performances'][0]['division_key'] = 'age-division';
+        $this->release['entities']['rankings'][] = ['key' => 'sex', 'performance_key' => 'p1', 'scope' => 'sex:M', 'published_place' => '3'];
+        $this->release['entities']['rankings'][] = ['key' => 'division', 'performance_key' => 'p1', 'scope' => 'division:M25-29', 'published_place' => '2'];
+        $xpath = $this->render();
+        self::assertSame('1', $this->cell($xpath, 'Performances', 1, 'Overall place'));
+        self::assertSame('3', $this->cell($xpath, 'Performances', 1, 'Sex-category place'));
+        self::assertSame('2', $this->cell($xpath, 'Performances', 1, 'Age-division place'));
+        self::assertSame('Not reported', $this->cell($xpath, 'Performances', 2, 'Sex-category place'));
+        self::assertSame('Sex category: M', $this->cell($xpath, 'Rankings', 3, 'Place category'));
+        self::assertSame('Division: M25-29', $this->cell($xpath, 'Rankings', 4, 'Place category'));
+    }
+
+    public function testAnOpenDivisionIsNotPresentedAsAnAgeDivision(): void
+    {
+        $this->release['entities']['divisions'][] = ['key' => 'open', 'published_label' => 'Open'];
+        $this->release['entities']['performances'][0]['division_key'] = 'open';
+        $this->release['entities']['rankings'][] = ['key' => 'open-place', 'performance_key' => 'p1', 'scope' => 'division:Open', 'published_place' => '2'];
+        $xpath = $this->render();
+        self::assertSame('2', $this->cell($xpath, 'Performances', 1, 'Division place'));
+        self::assertSame('Division: Open', $this->cell($xpath, 'Rankings', 3, 'Place category'));
+        self::assertSame(0, $this->nodes($xpath, '//th[text()="Age-division place"]')->length);
+    }
+
+    public function testComputedPlacesDoNotReplacePublishedSummaryAndAmbiguousScopesStayDetailed(): void
+    {
+        $this->release['entities']['rankings'][] = ['key' => 'computed', 'performance_key' => 'p1', 'scope' => 'overall', 'published_place' => '99', 'origin' => 'computed'];
+        $this->release['entities']['rankings'][] = ['key' => 'sex-one', 'performance_key' => 'p1', 'scope' => 'sex:M', 'published_place' => '3'];
+        $this->release['entities']['rankings'][] = ['key' => 'sex-two', 'performance_key' => 'p1', 'scope' => 'sex:Open', 'published_place' => '4'];
+        $xpath = $this->render();
+        self::assertSame('1', $this->cell($xpath, 'Performances', 1, 'Overall place'));
+        self::assertSame('See place details', $this->cell($xpath, 'Performances', 1, 'Sex-category place'));
+        self::assertSame('99', $this->cell($xpath, 'Rankings', 3, 'Place'));
+        self::assertSame('Computed', $this->cell($xpath, 'Rankings', 3, 'Origin'));
+        self::assertSame('3', $this->cell($xpath, 'Rankings', 4, 'Place'));
+        self::assertSame('4', $this->cell($xpath, 'Rankings', 5, 'Place'));
     }
 
     public function testQualificationCaseAndUnknownVersusZeroWindRemainVisible(): void
