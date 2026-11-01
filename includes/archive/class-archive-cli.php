@@ -100,7 +100,7 @@ final class ArchiveCli {
             if ($row === null) { throw new InvalidArgumentException('Archive candidate not found.'); }
             $bundle = json_decode($row['bundle_json'], true, 64, JSON_THROW_ON_ERROR);
             $keys = [];
-            foreach (ArchiveBundle::ENTITIES as $kind) { foreach ($bundle['entities'][$kind] as $record) { $keys[] = $kind . ':' . $record['key']; } }
+            foreach (ArchiveBundle::ENTITIES as $kind) { foreach (ArchiveBundle::records($bundle, $kind) as $record) { $keys[] = $kind . ':' . $record['key']; } }
             return ['id' => (int) $row['id'], 'state' => $row['state'], 'bundle_sha256' => $row['bundle_sha256'], 'source_sha256' => $bundle['source']['sha256'], 'candidate_records' => $keys];
         });
     }

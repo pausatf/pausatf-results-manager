@@ -21,7 +21,7 @@ final class ArchiveReview {
         self::require(isset($report['findings']) && is_array($report['findings']) && array_is_list($report['findings']) && count($report['findings']) <= 1000, 'Review findings must be a bounded list.');
         $all = [];
         foreach (ArchiveBundle::ENTITIES as $kind) {
-            foreach ($bundle['entities'][$kind] as $record) { $all[] = $kind . ':' . $record['key']; }
+            foreach (ArchiveBundle::records($bundle, $kind) as $record) { $all[] = $kind . ':' . $record['key']; }
         }
         $checked = $report['checked_records'] ?? null;
         self::require(is_array($checked) && array_is_list($checked) && count($checked) <= ArchiveBundle::MAX_RECORDS, 'Checked records must be a bounded list.');

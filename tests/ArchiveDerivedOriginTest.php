@@ -143,7 +143,7 @@ final class ArchiveDerivedOriginTest extends TestCase {
     private function report(bool $verifyRule = false): array {
         $checked = [];
         foreach (ArchiveBundle::ENTITIES as $kind) {
-            foreach ($this->bundle['entities'][$kind] as $record) { $checked[] = $kind . ':' . $record['key']; }
+            foreach (ArchiveBundle::records($this->bundle, $kind) as $record) { $checked[] = $kind . ':' . $record['key']; }
         }
         return [
             'bundle_sha256' => hash('sha256', json_encode($this->bundle, JSON_THROW_ON_ERROR)),

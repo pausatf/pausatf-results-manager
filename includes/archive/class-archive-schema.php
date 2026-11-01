@@ -13,11 +13,13 @@ use RuntimeException;
 
 /** Installs only new archive tables and confirms their actual database contracts. */
 final class ArchiveSchema {
-    public const VERSION = 1;
+    public const VERSION = 2;
     public const ENTITIES = [
         'archive_rulesets', 'archive_competitions', 'archive_divisions', 'archive_rounds',
         'archive_performances', 'archive_attempts', 'archive_rankings', 'archive_teams',
         'archive_scores', 'archive_result_releases', 'archive_record_claims',
+        // Added in schema version 2; install() creates them additively on version 1 databases.
+        'archive_standings', 'archive_assoc_records',
     ];
 
     public function __construct(private ArchiveDatabase $database) {}

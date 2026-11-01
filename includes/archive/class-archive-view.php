@@ -27,6 +27,10 @@ final class ArchiveView {
         if ($release['source_url'] !== null) {
             $out .= '<p><a rel="noopener noreferrer" href="' . esc_url($release['source_url']) . '">' . self::escape(__('Original results', 'pausatf-results')) . '</a></p>';
         }
+        $standings = $entities['series_standings'] ?? [];
+        $association_records = $entities['association_records'] ?? [];
+        // Standings or records lists without race results do not need an empty results table.
+        $show_performances = $performances !== [] || ($standings === [] && $association_records === []);
         $visible = array_slice($performances, ($page - 1) * 50, 50);
         $visible_keys = array_column($visible, 'key');
         $published_places = [];
@@ -58,6 +62,8 @@ final class ArchiveView {
         }
         unset($performance);
         $visible_map = array_column($visible, null, 'key');
+        $printed_lists = self::standings($standings) . self::association_records($association_records);
+        if (!$show_performances) { return $out . $printed_lists . self::context($entities, $names, $events, $divisions) . '</section>'; }
         $out .= self::table(__('Performances', 'pausatf-results'), $visible, [
             'athlete_name_raw' => 'Name as recorded', 'raw_mark' => 'Mark',
             'overall_place' => 'Overall place', 'sex_place' => 'Sex-category place', 'division_place' => $division_place_heading,
@@ -97,6 +103,19 @@ final class ArchiveView {
                 if ($kind === 'rankings') { $out .= '</details>'; }
             }
         }
+        return $out . $printed_lists . self::context($entities, $names, $events, $divisions) . '</section>';
+    }
+
+    /**
+     * Expandable source context that has no dedicated result table.
+     *
+     * @param array<string, list<array<string,mixed>>> $entities
+     * @param array<string,mixed> $names
+     * @param array<string, array<string,mixed>> $events
+     * @param array<string, array<string,mixed>> $divisions
+     */
+    private static function context(array $entities, array $names, array $events, array $divisions): string {
+        $out = '';
         foreach (['competitions', 'divisions', 'rounds', 'rulesets', 'teams', 'scores', 'result_releases'] as $kind) {
             if ($entities[$kind] === []) { continue; }
             $out .= '<details><summary>' . self::escape(ucfirst(str_replace('_', ' ', $kind))) . '</summary>';
@@ -115,7 +134,89 @@ final class ArchiveView {
             }
             $out .= '</details>';
         }
-        return $out . '</section>';
+        return $out;
+    }
+
+    /**
+     * Printed series standings, one table per series, kind and division in first-seen order.
+     *
+     * @param list<array<string,mixed>> $standings
+     */
+    private static function standings(array $standings): string {
+        $groups = [];
+        foreach ($standings as $standing) {
+            $series = $standing['series_label_as_printed'] ?? null;
+            $kind = $standing['standings_kind'];
+            $division = $standing['division_label_as_printed'];
+            $groups[json_encode([$series, $kind, $division], JSON_THROW_ON_ERROR)][] = $standing;
+        }
+        $out = '';
+        foreach ($groups as $records) {
+            $first = $records[0];
+            $caption = implode(' — ', array_filter([
+                $first['series_label_as_printed'] ?? null,
+                $first['division_label_as_printed'],
+                $first['standings_kind'] === 'team' ? __('Team standings', 'pausatf-results') : __('Individual standings', 'pausatf-results'),
+            ], static fn(mixed $part): bool => is_string($part) && $part !== ''));
+            // Race columns follow the first printed appearance of each label within the table.
+            $races = [];
+            foreach ($records as $record) {
+                foreach ((array) ($record['race_points_as_printed'] ?? []) as $label => $points) {
+                    $races[(string) $label] ??= 'race_' . count($races);
+                }
+            }
+            $rows = [];
+            foreach ($records as $record) {
+                $row = [
+                    'place' => $record['place_as_printed'] ?? null, 'name' => $record['name_as_printed'],
+                    'club' => $record['club_as_printed'] ?? null, 'total' => $record['total_as_printed'] ?? null,
+                ];
+                foreach ((array) ($record['race_points_as_printed'] ?? []) as $label => $points) { $row[$races[(string) $label]] = $points; }
+                $rows[] = $row;
+            }
+            $columns = ['place' => __('Place', 'pausatf-results'), 'name' => __('Name as printed', 'pausatf-results'), 'club' => __('Club', 'pausatf-results')];
+            foreach ($races as $label => $field) { $columns[$field] = $label; }
+            $out .= self::table($caption, $rows, $columns + ['total' => __('Total as printed', 'pausatf-results')]);
+        }
+        if ($out !== '') {
+            $out = '<h3>' . self::escape(__('Series standings', 'pausatf-results')) . '</h3>'
+                . '<p>' . self::escape(__('Places, points and totals are shown as printed; they are not recalculated.', 'pausatf-results')) . '</p>' . $out;
+        }
+        return $out;
+    }
+
+    /**
+     * Association records lists, one table per list and division in first-seen order.
+     *
+     * @param list<array<string,mixed>> $records
+     */
+    private static function association_records(array $records): string {
+        $groups = [];
+        foreach ($records as $record) {
+            $list = $record['list_label_as_printed'] ?? null;
+            $groups[json_encode([$list, $record['division_as_printed']], JSON_THROW_ON_ERROR)][] = $record;
+        }
+        $out = '';
+        foreach ($groups as $rows) {
+            $first = $rows[0];
+            $caption = implode(' — ', array_filter([$first['list_label_as_printed'] ?? null, $first['division_as_printed']],
+                static fn(mixed $part): bool => is_string($part) && $part !== ''));
+            foreach ($rows as &$row) {
+                $row['date_label'] = $row['date_as_printed'] ?? $row['date_set'] ?? null;
+            }
+            unset($row);
+            $out .= self::table($caption, $rows, [
+                'event_as_printed' => __('Event', 'pausatf-results'), 'mark_as_printed' => __('Mark', 'pausatf-results'),
+                'holder_name_as_printed' => __('Holder as printed', 'pausatf-results'), 'club_as_printed' => __('Club', 'pausatf-results'),
+                'date_label' => __('Date', 'pausatf-results'), 'meet_as_printed' => __('Meet', 'pausatf-results'),
+                'record_status_as_listed' => __('Status as listed', 'pausatf-results'),
+            ]);
+        }
+        if ($out !== '') {
+            $out = '<h3>' . self::escape(__('Records lists', 'pausatf-results')) . '</h3>'
+                . '<p>' . self::escape(__('Records are shown as listed by the source. Listing here does not ratify a record.', 'pausatf-results')) . '</p>' . $out;
+        }
+        return $out;
     }
 
     private static function table(string $caption, array $records, array $columns): string {

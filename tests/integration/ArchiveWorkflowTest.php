@@ -33,6 +33,7 @@ final class ArchiveWorkflowTest extends TestCase
         'archive_rulesets', 'archive_competitions', 'archive_divisions', 'archive_rounds',
         'archive_performances', 'archive_attempts', 'archive_rankings', 'archive_teams',
         'archive_scores', 'archive_result_releases', 'archive_record_claims',
+        'archive_standings', 'archive_assoc_records',
         'archive_reviews', 'archive_releases', 'archive_sources', 'archive_schema',
     ];
 
@@ -132,7 +133,7 @@ final class ArchiveWorkflowTest extends TestCase
         $bundle = json_decode($json, true, 64, JSON_THROW_ON_ERROR);
         $checked = [];
         foreach (ArchiveBundle::ENTITIES as $kind) {
-            foreach ($bundle['entities'][$kind] as $record) {
+            foreach (ArchiveBundle::records($bundle, $kind) as $record) {
                 $checked[] = $kind . ':' . $record['key'];
             }
         }
@@ -350,7 +351,7 @@ final class ArchiveWorkflowTest extends TestCase
         $public = $this->workflow->published($id);
         foreach (ArchiveBundle::TABLES as $kind => $suffix) {
             $rows = $this->database->rows('SELECT record_key, payload FROM ' . $this->database->table($suffix) . ' WHERE release_id=? ORDER BY ordinal', [$id]);
-            self::assertCount(count($this->bundle['entities'][$kind]), $rows, $kind);
+            self::assertCount(count(ArchiveBundle::records($this->bundle, $kind)), $rows, $kind);
             foreach ($rows as $index => $row) {
                 $actual = json_decode($row['payload'], true, 64, JSON_THROW_ON_ERROR);
                 self::assertSame($this->orderedObjectKeys($this->bundle['entities'][$kind][$index]), $this->orderedObjectKeys($actual), $kind);
@@ -489,5 +490,150 @@ final class ArchiveWorkflowTest extends TestCase
         $table = $this->database->table('archive_releases');
         $this->database->execute("UPDATE {$table} SET bundle_json=? WHERE id=?", [$this->json . ' ', $id]);
         $this->rejectOperation(fn() => $this->workflow->published($id));
+    }
+
+    /** Synthetic standings and records; the values are not historical. */
+    private function usePrintedLists(): void
+    {
+        $this->source = "Synthetic Grand Prix standings and youth records; not historical.\n"
+            . "Men Open: 1 Runner A, Club X, R1 10, R2 8, Total 18.\n"
+            . "Men Open teams: 1 Club X, Total 20.\n"
+            . "Girls 11-12: 1500m 4:59.9 Runner C, Club Y, 6/5/99, Meet Z; 4x100 relay vacant.\n";
+        $this->bundle['competition_key'] = 'synthetic-grand-prix';
+        $this->bundle['source']['path'] = 'synthetic/grand-prix.txt';
+        $this->bundle['source']['sha256'] = hash('sha256', $this->source);
+        $this->bundle['source']['bytes'] = strlen($this->source);
+        foreach ($this->bundle['entities'] as &$records) {
+            $records = [];
+        }
+        unset($records);
+        $this->bundle['entities']['series_standings'] = [
+            [
+                'key' => 'gp-a', 'source_locator' => ['kind' => 'line', 'line' => 2], 'standings_kind' => 'individual',
+                'series_label_as_printed' => 'Synthetic Grand Prix', 'division_label_as_printed' => 'Men Open',
+                'place_as_printed' => '1', 'name_as_printed' => 'Runner A', 'club_as_printed' => 'Club X',
+                'race_points_as_printed' => ['R1' => '10', 'R2' => '8'], 'total_as_printed' => '18', 'origin' => 'published',
+                'transcriber_note' => 'Private column note.',
+            ],
+            [
+                'key' => 'gp-team', 'source_locator' => ['kind' => 'line', 'line' => 3], 'standings_kind' => 'team',
+                'division_label_as_printed' => 'Men Open', 'name_as_printed' => 'Club X',
+                'race_points_as_printed' => new \stdClass(), 'total_as_printed' => '20',
+            ],
+        ];
+        $this->bundle['entities']['association_records'] = [
+            [
+                'key' => 'rec-1500', 'source_locator' => ['kind' => 'line', 'line' => 4],
+                'division_as_printed' => 'Girls 11-12', 'event_as_printed' => '1500m', 'holder_name_as_printed' => 'Runner C',
+                'club_as_printed' => 'Club Y', 'mark_as_printed' => '4:59.9', 'date_as_printed' => '6/5/99',
+                'date_set' => '1999-06-05', 'meet_as_printed' => 'Meet Z', 'record_status_as_listed' => 'PA list as published',
+                'is_relay' => false, 'ratification_reference' => 'Private lookup.',
+            ],
+            [
+                'key' => 'rec-relay', 'source_locator' => ['kind' => 'line', 'line' => 4],
+                'division_as_printed' => 'Girls 11-12', 'event_as_printed' => '4x100 relay',
+                'record_status_as_listed' => 'vacant as listed', 'is_relay' => true,
+            ],
+        ];
+        $this->bundle['coverage'] = [
+            ['key' => 'heading', 'disposition' => 'excluded', 'records' => [], 'reason' => 'Fixture heading.'],
+            ['key' => 'lists', 'disposition' => 'record', 'records' => [
+                'series_standings:gp-a', 'series_standings:gp-team', 'association_records:rec-1500', 'association_records:rec-relay',
+            ]],
+        ];
+    }
+
+    /** Version 1 used identical DDL apart from the two tables and marker added by version 2. */
+    private function revertToVersionOneSchema(): void
+    {
+        foreach (['archive_standings', 'archive_assoc_records'] as $suffix) {
+            $this->connection->query('DROP TABLE ' . $this->database->table($suffix));
+        }
+        $this->connection->query('UPDATE ' . $this->database->table('archive_schema') . ' SET version = 1 WHERE id = 1');
+    }
+
+    public function testPrintedStandingsAndRecordsStageReviewAndPublish(): void
+    {
+        $this->usePrintedLists();
+        $json = $this->encoded();
+        $id = $this->workflow->stage($json, $this->source, 10);
+        foreach (['series_standings', 'association_records'] as $kind) {
+            $rows = $this->database->rows('SELECT record_key, payload, ordinal FROM ' . $this->database->table(ArchiveBundle::TABLES[$kind]) . ' WHERE release_id=? ORDER BY ordinal', [$id]);
+            $expected = json_decode(json_encode($this->bundle['entities'][$kind], JSON_THROW_ON_ERROR), true, 64, JSON_THROW_ON_ERROR);
+            self::assertSame(array_column($expected, 'key'), array_column($rows, 'record_key'), $kind);
+            foreach ($rows as $index => $row) {
+                self::assertSame($index, (int) $row['ordinal']);
+                self::assertSame($this->orderedObjectKeys($expected[$index]), $this->orderedObjectKeys(json_decode($row['payload'], true, 64, JSON_THROW_ON_ERROR)), $kind);
+            }
+        }
+        $standings = $this->database->table('archive_standings');
+        self::assertSame('OBJECT', $this->database->rows("SELECT JSON_TYPE(JSON_EXTRACT(payload, '$.race_points_as_printed')) AS type FROM {$standings} WHERE release_id=? AND record_key='gp-team'", [$id])[0]['type']);
+
+        $report = json_decode($this->report($json), true, 64, JSON_THROW_ON_ERROR);
+        self::assertContains('association_records:rec-relay', $report['checked_records']);
+        $partial = $report;
+        $partial['checked_records'] = array_values(array_diff($report['checked_records'], ['association_records:rec-relay']));
+        $this->rejectOperation(fn() => $this->workflow->review($id, json_encode($partial, JSON_THROW_ON_ERROR), $this->source, 20));
+        self::assertSame('candidate', $this->workflow->inspect($id)['state']);
+        self::assertSame(0, (int) $this->scalar('SELECT COUNT(*) FROM ' . $this->database->table('archive_reviews')));
+
+        $this->workflow->review($id, json_encode($report, JSON_THROW_ON_ERROR), $this->source, 20);
+        $this->workflow->publish($id);
+        $public = $this->workflow->published($id);
+        self::assertSame(['1', null], array_map(static fn(array $row): ?string => $row['place_as_printed'] ?? null, $public['entities']['series_standings']));
+        self::assertSame(['R1' => '10', 'R2' => '8'], (array) $public['entities']['series_standings'][0]['race_points_as_printed']);
+        self::assertSame(['4:59.9', null], array_map(static fn(array $row): ?string => $row['mark_as_printed'] ?? null, $public['entities']['association_records']));
+        self::assertTrue($public['entities']['association_records'][1]['is_relay']);
+        self::assertSame('not_determined_by_extraction_review', $public['record_ratification']);
+        $encoded = json_encode($public, JSON_THROW_ON_ERROR);
+        self::assertStringNotContainsString('Private', $encoded);
+        self::assertStringContainsString('"race_points_as_printed":{}', $encoded);
+        self::assertSame([], $public['entities']['performances']);
+    }
+
+    public function testLateRecordsFailureRollsBackStandingsOfTheSameCandidate(): void
+    {
+        $this->usePrintedLists();
+        $json = $this->encoded();
+        $table = $this->database->table('archive_assoc_records');
+        $trigger = $this->prefix . 'fail_records';
+        $this->connection->query("CREATE TRIGGER {$trigger} BEFORE INSERT ON {$table} FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Injected late records failure'");
+        try {
+            $this->rejectOperation(fn() => $this->workflow->stage($json, $this->source, 10));
+        } finally {
+            $this->connection->query('DROP TRIGGER ' . $trigger);
+        }
+        self::assertSame(0, (int) $this->scalar('SELECT COUNT(*) FROM ' . $this->database->table('archive_releases')));
+        self::assertSame(0, (int) $this->scalar('SELECT COUNT(*) FROM ' . $this->database->table('archive_standings')));
+        self::assertGreaterThan(0, $this->workflow->stage($json, $this->source, 10));
+    }
+
+    public function testPublishedVersionOneReleaseServesAcrossSchemaUpgrade(): void
+    {
+        $legacy = $this->accept($this->json);
+        $this->revertToVersionOneSchema();
+        $before = $this->workflow->published($legacy);
+        self::assertNotNull($before);
+        self::assertSame(2, count($before['entities']['performances']));
+        self::assertSame([], $before['entities']['series_standings']);
+        self::assertSame([], $before['entities']['association_records']);
+        // An upgraded plugin keeps serving but refuses writes until the explicit installation.
+        $this->usePrintedLists();
+        $printed = $this->encoded();
+        $this->rejectOperation(fn() => $this->workflow->stage($printed, $this->source, 10));
+        self::assertSame(1, (int) $this->scalar('SELECT COUNT(*) FROM ' . $this->database->table('archive_releases')));
+
+        $this->workflow->install();
+        self::assertTrue($this->workflow->is_installed());
+        self::assertSame(2, (int) $this->scalar('SELECT version FROM ' . $this->database->table('archive_schema')));
+        self::assertSame($before, $this->workflow->published($legacy));
+        $stored = $this->workflow->inspect($legacy);
+        self::assertSame($this->json, $stored['bundle_json']);
+        self::assertSame(hash('sha256', $this->json), $stored['bundle_sha256']);
+        self::assertSame(2, (int) $this->scalar('SELECT COUNT(*) FROM ' . $this->database->table('archive_performances') . ' WHERE release_id = ' . $legacy));
+
+        $next = $this->accept($printed);
+        self::assertCount(2, $this->workflow->published($next)['entities']['series_standings']);
+        self::assertSame($before, $this->workflow->published($legacy));
     }
 }

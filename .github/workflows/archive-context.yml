@@ -90,6 +90,7 @@ jobs:
               'ArchiveBundleTest', 'ArchiveReviewTest', 'ArchiveViewTest',
               'ArchiveDatabaseTest', 'ArchiveWorkflowTest',
               'ArchiveCompetitionContextTest', 'ArchiveDerivedOriginTest',
+              'ArchivePrintedListsTest',
           }
           observed = {case.attrib.get('class', '').rsplit(chr(92), 1)[-1] for case in cases}
           assert required <= observed, 'Required archive suites were not executed'

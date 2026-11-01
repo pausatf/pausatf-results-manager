@@ -15,10 +15,17 @@ final class ArchiveBundle {
     public const MAX_JSON_BYTES = 8388608;
     public const MAX_SOURCE_BYTES = 33554432;
     public const MAX_RECORDS = 5000;
+    public const MAX_RACE_COLUMNS = 60;
     public const ENTITIES = [
         'rulesets', 'competitions', 'divisions', 'rounds', 'performances',
         'attempts', 'rankings', 'teams', 'scores', 'result_releases', 'record_claims',
+        'series_standings', 'association_records',
     ];
+    /**
+     * Collections added after bundle schema 1 was first published. Staged and published
+     * bundles are immutable, so older artifacts that omit these remain valid as empty.
+     */
+    public const OPTIONAL_ENTITIES = ['series_standings', 'association_records'];
     public const TABLES = [
         'rulesets' => 'archive_rulesets', 'competitions' => 'archive_competitions',
         'divisions' => 'archive_divisions', 'rounds' => 'archive_rounds',
@@ -26,6 +33,8 @@ final class ArchiveBundle {
         'rankings' => 'archive_rankings', 'teams' => 'archive_teams',
         'scores' => 'archive_scores', 'result_releases' => 'archive_result_releases',
         'record_claims' => 'archive_record_claims',
+        'series_standings' => 'archive_standings',
+        'association_records' => 'archive_assoc_records',
     ];
 
     /** @return array<string,mixed> */
@@ -65,8 +74,9 @@ final class ArchiveBundle {
         $keys = [];
         $count = 0;
         foreach (self::ENTITIES as $kind) {
-            self::check(isset($entities[$kind]) && is_array($entities[$kind]) && array_is_list($entities[$kind]), 'Each entity collection must be a list.');
             $keys[$kind] = [];
+            if (!array_key_exists($kind, $entities) && in_array($kind, self::OPTIONAL_ENTITIES, true)) { continue; }
+            self::check(isset($entities[$kind]) && is_array($entities[$kind]) && array_is_list($entities[$kind]), 'Each entity collection must be a list.');
             foreach ($entities[$kind] as $record) {
                 self::check(is_array($record) && !array_is_list($record), 'Records must be objects.');
                 self::identifier($record['key'] ?? null);
@@ -85,13 +95,13 @@ final class ArchiveBundle {
         }
         if ($binary !== null) {
             foreach (array_diff(self::ENTITIES, ['rulesets', 'competitions', 'result_releases']) as $kind) {
-                self::check($entities[$kind] === [], 'Binary sources require a separately verified conversion before structured extraction.');
+                self::check(($entities[$kind] ?? []) === [], 'Binary sources require a separately verified conversion before structured extraction.');
             }
         }
         $round_by_key = array_column($entities['rounds'], null, 'key');
         $performance_by_key = array_column($entities['performances'], null, 'key');
         foreach (self::ENTITIES as $kind) {
-            foreach ($entities[$kind] as $record) {
+            foreach ($entities[$kind] ?? [] as $record) {
                 $references = match ($kind) {
                     'rounds' => ['division_key' => 'divisions', 'competition_key' => 'competitions'],
                     'performances' => ['division_key' => 'divisions', 'round_key' => 'rounds', 'competition_key' => 'competitions'],
@@ -137,8 +147,28 @@ final class ArchiveBundle {
                 }
             }
         }
+        if (array_intersect(self::OPTIONAL_ENTITIES, array_keys($entities)) !== []) {
+            // Associative decoding cannot distinguish {} from [], so check the original JSON shapes.
+            $document = json_decode($json, false, 64, JSON_THROW_ON_ERROR);
+            foreach (self::OPTIONAL_ENTITIES as $kind) {
+                self::check(!property_exists($document->entities, $kind) || is_array($document->entities->{$kind}), 'Each entity collection must be a list.');
+            }
+            foreach ($document->entities->series_standings ?? [] as $record) {
+                self::check(($record->race_points_as_printed ?? null) instanceof \stdClass, 'Race points must be a JSON object keyed by printed race label.');
+            }
+        }
         self::coverage($bundle['coverage'] ?? null, $keys);
         return $bundle;
+    }
+
+    /**
+     * Records of one collection, treating a collection omitted by an older bundle as empty.
+     *
+     * @param array<string,mixed> $bundle
+     * @return list<array<string,mixed>>
+     */
+    public static function records(array $bundle, string $kind): array {
+        return $bundle['entities'][$kind] ?? [];
     }
 
     public static function binary_format(string $bytes): ?string {
@@ -226,6 +256,43 @@ final class ArchiveBundle {
             }
         }
         if ($kind === 'competitions' && isset($record['meet_date'])) { self::date($record['meet_date']); }
+        if ($kind === 'series_standings') {
+            self::check(in_array($record['standings_kind'] ?? null, ['individual', 'team'], true), 'Standings kind must be individual or team.');
+            self::text($record, 'division_label_as_printed', 255, false);
+            self::text($record, 'name_as_printed', 255, false);
+            self::printed($record, 'series_label_as_printed', 255);
+            self::printed($record, 'place_as_printed', 64);
+            self::printed($record, 'club_as_printed', 255);
+            self::printed($record, 'total_as_printed', 64);
+            $points = $record['race_points_as_printed'] ?? null;
+            self::check(is_array($points) && count($points) <= self::MAX_RACE_COLUMNS, 'Race points must be a bounded object.');
+            foreach ($points as $label => $value) {
+                $label = (string) $label;
+                self::check(trim($label) !== '' && preg_match_all('/./us', $label) <= 96 && !str_contains($label, "\0"), 'Invalid printed race label.');
+                self::check(is_string($value) && preg_match_all('/./us', $value) <= 64 && !str_contains($value, "\0"), 'Race points must be printed strings.');
+            }
+        }
+        if ($kind === 'association_records') {
+            self::text($record, 'division_as_printed', 255, false);
+            self::text($record, 'event_as_printed', 255, false);
+            self::text($record, 'record_status_as_listed', 96, false);
+            foreach (['list_label_as_printed', 'holder_name_as_printed', 'club_as_printed', 'mark_as_printed', 'meet_as_printed'] as $field) {
+                self::printed($record, $field, 255);
+            }
+            self::printed($record, 'date_as_printed', 64);
+            if (isset($record['date_set'])) { self::date($record['date_set']); }
+            self::check(!isset($record['is_relay']) || is_bool($record['is_relay']), 'Relay flag must be a boolean.');
+        }
+    }
+
+    /**
+     * Optional printed cells may be blank; null or absent means not reported.
+     *
+     * @param array<string,mixed> $record
+     */
+    private static function printed(array $record, string $field, int $max): void {
+        if (!isset($record[$field])) { return; }
+        self::check(is_string($record[$field]) && preg_match_all('/./us', $record[$field]) <= $max && !str_contains($record[$field], "\0"), 'Invalid printed field: ' . $field . '.');
     }
 
     private static function date(mixed $value): void {

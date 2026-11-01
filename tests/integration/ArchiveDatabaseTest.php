@@ -25,6 +25,7 @@ final class ArchiveDatabaseTest extends TestCase {
         'archive_rulesets', 'archive_competitions', 'archive_divisions', 'archive_rounds',
         'archive_performances', 'archive_attempts', 'archive_rankings', 'archive_teams',
         'archive_scores', 'archive_result_releases', 'archive_record_claims',
+        'archive_standings', 'archive_assoc_records',
         'archive_reviews', 'archive_releases', 'archive_sources', 'archive_schema',
     ];
 
@@ -98,7 +99,7 @@ final class ArchiveDatabaseTest extends TestCase {
         self::assertFalse($this->schema->is_installed());
         $this->schema->install();
         self::assertTrue($this->schema->is_installed());
-        self::assertSame('1', (string) $this->scalar('SELECT version FROM ' . $this->database->table('archive_schema') . ' WHERE id = 1'));
+        self::assertSame('2', (string) $this->scalar('SELECT version FROM ' . $this->database->table('archive_schema') . ' WHERE id = 1'));
         foreach (self::TABLES as $suffix) {
             $table = $this->database->table($suffix);
             $rows = $this->nativeRows('SELECT ENGINE, TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [$table]);
@@ -106,7 +107,7 @@ final class ArchiveDatabaseTest extends TestCase {
             self::assertSame('InnoDB', $rows[0]['ENGINE']);
             self::assertSame('utf8mb4_bin', $rows[0]['TABLE_COLLATION']);
         }
-        foreach (array_slice(self::TABLES, 0, 11) as $suffix) {
+        foreach (array_slice(self::TABLES, 0, 13) as $suffix) {
             $table = $this->database->table($suffix);
             self::assertSame('json', $this->nativeRows('SELECT DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?', [$table, 'payload'])[0]['DATA_TYPE']);
             $indexes = $this->nativeRows('SELECT NON_UNIQUE, COLUMN_NAME, SUB_PART FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ? ORDER BY SEQ_IN_INDEX', [$table, 'release_record_key']);
@@ -168,7 +169,8 @@ final class ArchiveDatabaseTest extends TestCase {
         $this->schema->install();
         $source = $this->insertSource('future schema');
         $marker = $this->database->table('archive_schema');
-        $this->connection->query("UPDATE {$marker} SET version = 2 WHERE id = 1");
+        $future = ArchiveSchema::VERSION + 1;
+        $this->connection->query("UPDATE {$marker} SET version = {$future} WHERE id = 1");
         self::assertFalse($this->schema->is_installed());
         $failed = false;
         try {
@@ -177,7 +179,7 @@ final class ArchiveDatabaseTest extends TestCase {
             $failed = true;
         }
         self::assertTrue($failed);
-        self::assertSame(2, (int) $this->scalar("SELECT version FROM {$marker} WHERE id = 1"));
+        self::assertSame($future, (int) $this->scalar("SELECT version FROM {$marker} WHERE id = 1"));
         self::assertSame($source, (int) $this->scalar('SELECT id FROM ' . $this->database->table('archive_sources')));
     }
 
@@ -393,6 +395,96 @@ final class ArchiveDatabaseTest extends TestCase {
         }
         self::assertTrue($failed, 'Reinstallation must not accept incomplete identity constraints.');
         self::assertFalse($this->schema->is_installed());
+    }
+
+    public function testVersionOneDatabaseUpgradesAdditivelyToVersionTwo(): void {
+        $this->installVersionOne();
+        self::assertFalse($this->schema->is_installed(), 'Writes must wait for the explicit version 2 installation.');
+        $source = $this->insertSource('version one evidence');
+        $releases = $this->database->table('archive_releases');
+        $bundle = '{"schema_version":1}';
+        $this->database->execute("INSERT INTO {$releases} (source_id,competition_key,source_path,bundle_sha256,bundle_json,producer_user_id,state) VALUES (?,?,?,?,?,?,?)", [$source, 'v1-meet', 'v1.txt', hash('sha256', $bundle), $bundle, 1, 'published']);
+        $before = [];
+        foreach (array_slice(self::TABLES, 0, 11) as $suffix) {
+            $before[$suffix] = $this->nativeRows('SHOW CREATE TABLE ' . $this->database->table($suffix));
+        }
+        $before['releases'] = $this->nativeRows("SELECT * FROM {$releases}");
+        $this->schema->install();
+        self::assertTrue($this->schema->is_installed());
+        self::assertSame('2', (string) $this->scalar('SELECT version FROM ' . $this->database->table('archive_schema') . ' WHERE id = 1'));
+        foreach (array_slice(self::TABLES, 0, 11) as $suffix) {
+            self::assertSame($before[$suffix], $this->nativeRows('SHOW CREATE TABLE ' . $this->database->table($suffix)), $suffix);
+        }
+        self::assertSame($before['releases'], $this->nativeRows("SELECT * FROM {$releases}"));
+        $reference = $this->nativeRows('SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION', [$this->database->table('archive_record_claims')]);
+        foreach (['archive_standings', 'archive_assoc_records'] as $suffix) {
+            $table = $this->database->table($suffix);
+            self::assertSame($reference, $this->nativeRows('SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION', [$table]), $suffix);
+            $tables = $this->nativeRows('SELECT ENGINE, TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [$table]);
+            self::assertSame([['ENGINE' => 'InnoDB', 'TABLE_COLLATION' => 'utf8mb4_bin']], $tables);
+            $indexes = $this->nativeRows('SELECT COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ? ORDER BY SEQ_IN_INDEX', [$table, 'release_record_key']);
+            self::assertSame(['release_id', 'record_key'], array_column($indexes, 'COLUMN_NAME'));
+            $foreign = $this->nativeRows('SELECT REFERENCED_TABLE_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL', [$table, 'release_id']);
+            self::assertSame([['REFERENCED_TABLE_NAME' => $releases]], $foreign);
+            self::assertSame(0, (int) $this->scalar("SELECT COUNT(*) FROM {$table}"));
+        }
+        $this->schema->install();
+        self::assertSame('2', (string) $this->scalar('SELECT version FROM ' . $this->database->table('archive_schema') . ' WHERE id = 1'));
+    }
+
+    public function testVersionTwoTablesKeepTheVersionOnePrefixLimit(): void {
+        // The longest version 1 name allowed a 33-character prefix within MySQL's 64-character limit.
+        $prefix = str_repeat('p', 33);
+        $database = new ArchiveDatabase($this->connection, $prefix);
+        foreach (['archive_standings', 'archive_assoc_records'] as $suffix) {
+            self::assertLessThanOrEqual(64, strlen($database->table($suffix)));
+        }
+        $this->expectException(RuntimeException::class);
+        new ArchiveDatabase($this->connection, $prefix . 'p');
+    }
+
+    public function testIncompatibleNewTableKeepsVersionOneMarker(): void {
+        $this->installVersionOne();
+        $table = $this->database->table('archive_assoc_records');
+        $this->connection->query("CREATE TABLE {$table} (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, sentinel VARCHAR(32) NOT NULL) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin");
+        $this->connection->query("INSERT INTO {$table} (sentinel) VALUES ('preserve me')");
+        $failed = false;
+        try {
+            $this->schema->install();
+        } catch (RuntimeException) {
+            $failed = true;
+        }
+        self::assertTrue($failed, 'An incompatible table must block the version 2 marker.');
+        self::assertSame('1', (string) $this->scalar('SELECT version FROM ' . $this->database->table('archive_schema') . ' WHERE id = 1'));
+        self::assertSame('preserve me', $this->scalar("SELECT sentinel FROM {$table}"));
+        self::assertFalse($this->schema->is_installed());
+    }
+
+    public function testVersionOneUpgradeRejectsCallerOwnedTransaction(): void {
+        $this->installVersionOne();
+        $this->connection->begin_transaction();
+        $failed = false;
+        try {
+            $this->schema->install();
+        } catch (RuntimeException) {
+            $failed = true;
+        }
+        self::assertTrue($failed);
+        $this->connection->rollback();
+        self::assertSame([], $this->nativeRows('SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [$this->database->table('archive_standings')]));
+        self::assertSame('1', (string) $this->scalar('SELECT version FROM ' . $this->database->table('archive_schema') . ' WHERE id = 1'));
+    }
+
+    /**
+     * Version 1 created the same DDL for every table except the two collections added in
+     * version 2, so removing those tables and the newer marker reproduces a version 1 install.
+     */
+    private function installVersionOne(): void {
+        $this->schema->install();
+        foreach (['archive_standings', 'archive_assoc_records'] as $suffix) {
+            $this->connection->query('DROP TABLE ' . $this->database->table($suffix));
+        }
+        $this->connection->query('UPDATE ' . $this->database->table('archive_schema') . ' SET version = 1 WHERE id = 1');
     }
 
     private function insertSource(string $identity): int {

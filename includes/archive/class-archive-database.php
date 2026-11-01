@@ -20,6 +20,8 @@ final class ArchiveDatabase {
         'archive_rulesets', 'archive_competitions', 'archive_divisions', 'archive_rounds',
         'archive_performances', 'archive_attempts', 'archive_rankings', 'archive_teams',
         'archive_scores', 'archive_result_releases', 'archive_record_claims',
+        // Version 2 names stay within the longest version 1 suffix so supported prefixes still fit.
+        'archive_standings', 'archive_assoc_records',
     ];
 
     public function __construct(private mysqli $connection, private string $prefix) {

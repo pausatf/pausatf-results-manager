@@ -65,7 +65,8 @@ final class ArchiveWorkflow {
                 $table = $this->database->table($suffix);
                 $pending = [];
                 $expected = [];
-                foreach ($document->entities->{$kind} as $ordinal => $record) {
+                // Bundles staged before schema version 2 may omit the newer collections.
+                foreach ($document->entities->{$kind} ?? [] as $ordinal => $record) {
                     $payload = json_encode($record, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION);
                     $pending[] = [$release_id, $record->key, $payload, $ordinal];
                     $expected[] = ['record_key' => $record->key, 'payload' => json_decode($payload, true, 64, JSON_THROW_ON_ERROR), 'ordinal' => $ordinal];
@@ -168,6 +169,22 @@ final class ArchiveWorkflow {
         if ($row === null) { return null; }
         if (hash('sha256', $row['bundle_json']) !== $row['bundle_sha256']) { throw new RuntimeException('Published artifact integrity check failed.'); }
         $bundle = json_decode($row['bundle_json'], true, 64, JSON_THROW_ON_ERROR);
+        return [
+            'id' => (int) $row['id'], 'competition_key' => $row['competition_key'], 'published_at' => $row['published_at'],
+            'supersedes_id' => $row['supersedes_id'] === null ? null : (int) $row['supersedes_id'],
+            'bundle_sha256' => $row['bundle_sha256'], 'source_sha256' => $bundle['source']['sha256'],
+            'source_url' => $row['source_url'], 'entities' => self::public_entities($bundle),
+            'record_ratification' => 'not_determined_by_extraction_review',
+        ];
+    }
+
+    /**
+     * Allowlisted public fields of every collection; omitted older collections project as empty.
+     *
+     * @param array<string,mixed> $bundle
+     * @return array<string, list<array<string,mixed>>>
+     */
+    public static function public_entities(array $bundle): array {
         $fields = [
             'rulesets' => ['key', 'edition', 'authority_scope', 'effective_from', 'effective_until', 'rule_reference', 'source_url'],
             'competitions' => ['key', 'title', 'meet_date', 'discipline', 'surface', 'course_version', 'distance_raw', 'distance_unit', 'implement_weight', 'hurdle_specification'],
@@ -180,6 +197,8 @@ final class ArchiveWorkflow {
             'scores' => ['key', 'team_key', 'performance_key', 'published_points', 'recomputed_points', 'event_multiplier', 'origin', 'ruleset_key', 'calculation_version'],
             'result_releases' => ['key', 'published_at', 'status_as_reported', 'supersedes'],
             'record_claims' => ['key', 'performance_key', 'record_type_as_printed', 'claimed_status', 'governing_ruleset'],
+            'series_standings' => ['key', 'source_locator', 'standings_kind', 'division_label_as_printed', 'series_label_as_printed', 'place_as_printed', 'name_as_printed', 'club_as_printed', 'race_points_as_printed', 'total_as_printed', 'origin'],
+            'association_records' => ['key', 'source_locator', 'list_label_as_printed', 'division_as_printed', 'event_as_printed', 'holder_name_as_printed', 'club_as_printed', 'mark_as_printed', 'date_as_printed', 'date_set', 'meet_as_printed', 'record_status_as_listed', 'is_relay'],
         ];
         $entities = [];
         foreach ($fields as $kind => $allowlist) {
@@ -194,16 +213,14 @@ final class ArchiveWorkflow {
                     };
                     $public['source_locator'] = array_intersect_key($public['source_locator'], array_flip($coordinates));
                 }
+                if (isset($public['race_points_as_printed'])) {
+                    // Keep printed race labels a JSON object even when empty or numeric-looking.
+                    $public['race_points_as_printed'] = (object) $public['race_points_as_printed'];
+                }
                 return $public;
-            }, $bundle['entities'][$kind]);
+            }, ArchiveBundle::records($bundle, $kind));
         }
-        return [
-            'id' => (int) $row['id'], 'competition_key' => $row['competition_key'], 'published_at' => $row['published_at'],
-            'supersedes_id' => $row['supersedes_id'] === null ? null : (int) $row['supersedes_id'],
-            'bundle_sha256' => $row['bundle_sha256'], 'source_sha256' => $bundle['source']['sha256'],
-            'source_url' => $row['source_url'], 'entities' => $entities,
-            'record_ratification' => 'not_determined_by_extraction_review',
-        ];
+        return $entities;
     }
 
     public function recent(int $offset = 0, int $limit = 25): array {
