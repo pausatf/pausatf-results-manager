@@ -1,0 +1,40 @@
+.pausatf-archive-context .pausatf-archive-table {
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.pausatf-archive-context table {
+    border-collapse: collapse;
+    width: 100%;
+    font-variant-numeric: tabular-nums;
+}
+
+.pausatf-archive-context th,
+.pausatf-archive-context td {
+    border: 1px solid currentColor;
+    padding: 0.5rem;
+    text-align: start;
+    vertical-align: top;
+}
+
+.pausatf-archive-context caption,
+.pausatf-archive-context dt {
+    font-weight: 700;
+}
+
+.pausatf-archive-context nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-block: 1rem;
+}
+
+.pausatf-archive-context summary {
+    cursor: pointer;
+    padding-block: 0.75rem;
+}
+
+.pausatf-archive-evidence {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

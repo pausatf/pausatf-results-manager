@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "competition_key": "gimme-shelter-5k-1996",
+  "source": {
+    "sha256": "ca8e34150a2d8d20dc0486989e688e06ac94d44f3cf1f442c37086482e9eea69",
+    "bytes": 158,
+    "path": "tests/fixtures/archive-context/1996-5ka-excerpt.txt",
+    "format": "text",
+    "encoding": "ASCII"
+  },
+  "entities": {
+    "rulesets": [],
+    "competitions": [],
+    "divisions": [],
+    "rounds": [],
+    "performances": [
+      {
+        "key": "p1",
+        "athlete_name_raw": "Christophe Impens, Albuqu",
+        "raw_mark": "14:13",
+        "source_locator": {
+          "kind": "line",
+          "line": 1
+        }
+      },
+      {
+        "key": "p2",
+        "athlete_name_raw": "Matt Guisto, Albuquerque",
+        "raw_mark": "14:13",
+        "source_locator": {
+          "kind": "line",
+          "line": 2
+        }
+      }
+    ],
+    "attempts": [],
+    "rankings": [
+      {
+        "key": "r1",
+        "performance_key": "p1",
+        "scope": "overall",
+        "published_place": "1",
+        "origin": "published",
+        "source_locator": {
+          "kind": "line",
+          "line": 1
+        }
+      },
+      {
+        "key": "r2",
+        "performance_key": "p2",
+        "scope": "overall",
+        "published_place": "2",
+        "origin": "published",
+        "source_locator": {
+          "kind": "line",
+          "line": 2
+        }
+      }
+    ],
+    "teams": [],
+    "scores": [],
+    "result_releases": [],
+    "record_claims": []
+  },
+  "coverage": [
+    {
+      "key": "line1",
+      "disposition": "record",
+      "records": [
+        "performances:p1",
+        "rankings:r1"
+      ]
+    },
+    {
+      "key": "line2",
+      "disposition": "record",
+      "records": [
+        "performances:p2",
+        "rankings:r2"
+      ]
+    }
+  ]
+}

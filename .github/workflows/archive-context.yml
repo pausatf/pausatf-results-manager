@@ -1,0 +1,207 @@
+name: Archive Context Verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: archive-context-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  archive-context:
+    name: Archive context on MySQL 8.4
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PAUSATF_ARCHIVE_TEST_MYSQL_HOST: 127.0.0.1
+      PAUSATF_ARCHIVE_TEST_MYSQL_PORT: '3306'
+      PAUSATF_ARCHIVE_TEST_MYSQL_USER: root
+      PAUSATF_ARCHIVE_TEST_MYSQL_PASSWORD: ''
+      PAUSATF_ARCHIVE_TEST_MYSQL_DATABASE: archive_context_test
+      PAUSATF_ARCHIVE_WP_TEST_DB: archive_wordpress_test_ci
+      PAUSATF_ARCHIVE_WP_TEST_URL: http://127.0.0.1:8085
+    services:
+      mysql:
+        image: mysql@sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69 # MySQL 8.4.13
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: archive_context_test
+        ports:
+          - 127.0.0.1:3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --host=127.0.0.1 --user=root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
+        with:
+          php-version: '8.4'
+          extensions: mysqli, dom, mbstring, intl, zip, gd, curl
+          coverage: none
+          tools: composer:v2
+
+      - name: Prepare private test reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/archive-context-reports"
+          printf 'ARCHIVE_REPORT_DIR=%s\n' "$RUNNER_TEMP/archive-context-reports" >> "$GITHUB_ENV"
+          printf 'PAUSATF_ARCHIVE_WP_TEST_PATH=%s\n' "$RUNNER_TEMP/archive-wordpress" >> "$GITHUB_ENV"
+          password=$(openssl rand -hex 32)
+          echo "::add-mask::$password"
+          printf 'PAUSATF_ARCHIVE_WP_TEST_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
+
+      - name: Install locked PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run unit and native MySQL contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          vendor/bin/phpunit --fail-on-skipped --log-junit "$ARCHIVE_REPORT_DIR/unit-native.xml"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          report = Path(os.environ['ARCHIVE_REPORT_DIR']) / 'unit-native.xml'
+          root = ET.parse(report).getroot()
+          cases = list(root.iter('testcase'))
+          assert cases, 'No tests executed'
+          assert not any(root.iter('skipped')), 'Required tests were skipped'
+          assert not any(root.iter('failure')), 'Test failures remain'
+          assert not any(root.iter('error')), 'Test errors remain'
+          required = {
+              'ArchiveBundleTest', 'ArchiveReviewTest', 'ArchiveViewTest',
+              'ArchiveDatabaseTest', 'ArchiveWorkflowTest',
+              'ArchiveCompetitionContextTest', 'ArchiveDerivedOriginTest',
+          }
+          observed = {case.attrib.get('class', '').rsplit(chr(92), 1)[-1] for case in cases}
+          assert required <= observed, 'Required archive suites were not executed'
+          assert sum(int(case.attrib.get('assertions', '0')) for case in cases) > 0
+          print('Executed', len(cases), 'tests including all required archive suites')
+          PY
+
+      - name: Prepare fresh WordPress fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/archive-wordpress-7.1.4.tar.gz"
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+            https://wordpress.org/wordpress-7.1.4.tar.gz --output "$archive"
+          printf '%s  %s\n' \
+            '881e53a4681ff2cd911651b11cccdede5ae477ddf0765af5d6a1a8b219a1d835' \
+            "$archive" | sha256sum --check --strict
+          mkdir -p "$PAUSATF_ARCHIVE_WP_TEST_PATH"
+          tar --extract --gzip --file "$archive" --directory "$PAUSATF_ARCHIVE_WP_TEST_PATH" --strip-components=1
+          ln -s "$GITHUB_WORKSPACE" "$PAUSATF_ARCHIVE_WP_TEST_PATH/wp-content/plugins/pausatf-results-manager"
+          php <<'PHP'
+          <?php
+          $db = new mysqli('127.0.0.1', 'root', '', 'archive_context_test', 3306);
+          if (!$db->query('CREATE DATABASE archive_wordpress_test_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci')) {
+              throw new RuntimeException('Fixture database creation failed');
+          }
+          PHP
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import secrets
+
+          root = Path(os.environ['PAUSATF_ARCHIVE_WP_TEST_PATH'])
+          config = "<?php\n"
+          values = {
+              'DB_NAME': os.environ['PAUSATF_ARCHIVE_WP_TEST_DB'],
+              'DB_USER': 'root', 'DB_PASSWORD': '', 'DB_HOST': '127.0.0.1:3306',
+              'DB_CHARSET': 'utf8mb4', 'DB_COLLATE': '',
+              'WP_ENVIRONMENT_TYPE': 'local',
+              'WP_HOME': os.environ['PAUSATF_ARCHIVE_WP_TEST_URL'],
+              'WP_SITEURL': os.environ['PAUSATF_ARCHIVE_WP_TEST_URL'],
+          }
+          for name in ['AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY',
+                       'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT']:
+              values[name] = secrets.token_hex(32)
+          for name, value in values.items():
+              # Inputs are fixed local test settings or generated hexadecimal salts.
+              assert "'" not in value and '\\' not in value
+              config += f"define('{name}', '{value}');\n"
+          config += "define('DISABLE_WP_CRON', true);\n"
+          config += "define('WP_HTTP_BLOCK_EXTERNAL', true);\n"
+          config += "define('WP_DEBUG', false);\n"
+          config += "$table_prefix = 'archive_ci_';\n"
+          config += "if (!defined('ABSPATH')) { define('ABSPATH', __DIR__ . '/'); }\n"
+          config += "require_once ABSPATH . 'wp-settings.php';\n"
+          path = root / 'wp-config.php'
+          with path.open('x') as handle:
+              handle.write(config)
+          path.chmod(0o600)
+          PY
+          php tests/integration/wordpress-bootstrap.php > "$ARCHIVE_REPORT_DIR/wordpress-bootstrap.json"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = json.loads((Path(os.environ['ARCHIVE_REPORT_DIR']) / 'wordpress-bootstrap.json').read_text())
+          assert report['installed'] is True
+          assert report['wordpress_version'] == '7.1.4'
+          assert report['mysql_version'].startswith('8.4.')
+          PY
+
+      - name: Exercise native administrator forms and public routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          setsid env PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8085 \
+            -t "$PAUSATF_ARCHIVE_WP_TEST_PATH" \
+            "$GITHUB_WORKSPACE/tests/integration/wordpress-router.php" \
+            > "$ARCHIVE_REPORT_DIR/wordpress-server.log" 2>&1 < /dev/null &
+          echo "$!" > "$RUNNER_TEMP/archive-context-server.pid"
+          python3 tests/integration/verify-archive-http.py \
+            --base-url "$PAUSATF_ARCHIVE_WP_TEST_URL" \
+            --report "$ARCHIVE_REPORT_DIR/wordpress-http.json"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = json.loads((Path(os.environ['ARCHIVE_REPORT_DIR']) / 'wordpress-http.json').read_text())
+          assert report['executed'] >= 45, 'Required native HTTP checks did not execute'
+          assert len(report['checks']) == report['executed']
+          assert report['passed'] is True and all(check['passed'] for check in report['checks'])
+          PY
+
+      - name: Stop task-owned WordPress test server
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f "$RUNNER_TEMP/archive-context-server.pid" ]]; then
+            read -r pid < "$RUNNER_TEMP/archive-context-server.pid"
+            if [[ "$pid" =~ ^[0-9]+$ ]]; then
+              kill -- "-$pid" 2>/dev/null || true
+            fi
+          fi
+
+      - name: Upload verification reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: archive-context-verification
+          path: ${{ runner.temp }}/archive-context-reports/
+          if-no-files-found: error
+          retention-days: 7
