@@ -2,7 +2,7 @@
 /**
  * USATF Age Divisions
  *
- * Defines age group divisions per USATF Rules (Rule 141, 300-303)
+ * Defines age group divisions per USATF Rules 141 (age), 300.1 (youth) and 320.2 (masters)
  *
  * @package PAUSATF\Results\Rules
  */
@@ -18,18 +18,24 @@ if (!defined('ABSPATH')) {
  */
 class USATFAgeDivisions {
     /**
-     * Youth divisions (Under 20)
-     * Per USATF Rule 302
+     * Youth divisions per USATF Rule 300.1(b): 8 & under, 9-10, 11-12, 13-14, 15-16, 17-18,
+     * assigned by year of birth (age reached by December 31 of the competition year).
+     * Names are the Pacific Association's; Sub-Bantam is PA-only and competes as Bantam
+     * at national meets. Codes are legacy identifiers kept stable for stored records.
      */
     private const YOUTH_DIVISIONS = [
-        'U8' => ['code' => 'U8', 'name' => 'Sub-Bantam', 'min_age' => 0, 'max_age' => 7, 'gender' => 'X'],
-        'U10' => ['code' => 'U10', 'name' => 'Bantam', 'min_age' => 8, 'max_age' => 9, 'gender' => 'X'],
-        'U12' => ['code' => 'U12', 'name' => 'Midget', 'min_age' => 10, 'max_age' => 11, 'gender' => 'X'],
-        'U14' => ['code' => 'U14', 'name' => 'Youth', 'min_age' => 12, 'max_age' => 13, 'gender' => 'X'],
-        'U16' => ['code' => 'U16', 'name' => 'Intermediate', 'min_age' => 14, 'max_age' => 15, 'gender' => 'X'],
-        'U18' => ['code' => 'U18', 'name' => 'Young', 'min_age' => 16, 'max_age' => 17, 'gender' => 'X'],
-        'U20' => ['code' => 'U20', 'name' => 'Junior', 'min_age' => 18, 'max_age' => 19, 'gender' => 'X'],
+        'U8' => ['code' => 'U8', 'name' => 'Sub-Bantam', 'min_age' => 0, 'max_age' => 8, 'gender' => 'X'],
+        'U10' => ['code' => 'U10', 'name' => 'Bantam', 'min_age' => 9, 'max_age' => 10, 'gender' => 'X'],
+        'U12' => ['code' => 'U12', 'name' => 'Midget', 'min_age' => 11, 'max_age' => 12, 'gender' => 'X'],
+        'U14' => ['code' => 'U14', 'name' => 'Youth', 'min_age' => 13, 'max_age' => 14, 'gender' => 'X'],
+        'U16' => ['code' => 'U16', 'name' => 'Intermediate', 'min_age' => 15, 'max_age' => 16, 'gender' => 'X'],
+        'U18' => ['code' => 'U18', 'name' => 'Young', 'min_age' => 17, 'max_age' => 18, 'gender' => 'X'],
     ];
+
+    /**
+     * U20 is a separate classification (Rule 141.1(b)), not a youth division.
+     */
+    private const U20_DIVISION = ['code' => 'U20', 'name' => 'Junior', 'min_age' => 19, 'max_age' => 19, 'gender' => 'X'];
 
     /**
      * Open division (20-34)
@@ -40,7 +46,7 @@ class USATFAgeDivisions {
 
     /**
      * Masters divisions (35+)
-     * Per USATF Rule 300 - 5-year age groups
+     * Per USATF Rule 320.2 - 5-year age groups (track & field and race walk; LDR masters start at 40)
      */
     private const MASTERS_DIVISIONS = [
         'M35' => ['code' => 'M35', 'name' => 'Masters 35-39', 'min_age' => 35, 'max_age' => 39, 'gender' => 'M'],
@@ -78,12 +84,12 @@ class USATFAgeDivisions {
      */
     private const RULE_CHANGES = [
         2020 => [
-            'masters_start_age' => 35, // Prior was 40 for some events
-            'youth_age_determination' => 'dec31', // Age as of Dec 31
+            'masters_start_age' => 35, // Track & field and race walk; LDR masters start at 40 (Rule 141.1(d))
+            'youth_age_determination' => 'year_of_birth', // Rule 300.1(b)
         ],
         2024 => [
             'masters_start_age' => 35,
-            'youth_age_determination' => 'dec31',
+            'youth_age_determination' => 'year_of_birth',
         ],
     ];
 
@@ -93,8 +99,8 @@ class USATFAgeDivisions {
     public static function get_divisions(int $year): array {
         $divisions = [];
 
-        // Youth divisions
-        foreach (self::YOUTH_DIVISIONS as $code => $division) {
+        // Youth divisions, then the separate U20 classification
+        foreach (self::YOUTH_DIVISIONS + ['U20' => self::U20_DIVISION] as $code => $division) {
             $divisions[$code . '_M'] = array_merge($division, ['gender' => 'M']);
             $divisions[$code . '_F'] = array_merge($division, ['gender' => 'F']);
         }
@@ -118,13 +124,17 @@ class USATFAgeDivisions {
         $gender = strtoupper($gender);
         $gender_code = $gender === 'F' ? 'W' : 'M';
 
-        // Youth
-        if ($age < 20) {
+        // Youth (age as reached by December 31, i.e. by year of birth)
+        if ($age <= 18) {
             foreach (self::YOUTH_DIVISIONS as $code => $division) {
                 if ($age >= $division['min_age'] && $age <= $division['max_age']) {
                     return array_merge($division, ['gender' => $gender, 'code' => $code]);
                 }
             }
+        }
+
+        if ($age === 19) {
+            return array_merge(self::U20_DIVISION, ['gender' => $gender]);
         }
 
         // Open
@@ -179,11 +189,30 @@ class USATFAgeDivisions {
     }
 
     /**
-     * Get age determination rule for year
+     * Youth division for an athlete's year of birth (Rule 300.1(b)); null above 18.
      */
-    public static function get_age_determination_rule(int $year): string {
-        // USATF Rule 141: Age as of December 31 of competition year
-        return 'dec31';
+    public static function get_youth_division_for_birth_year(int $birth_year, int $competition_year, string $gender): ?array {
+        $age = $competition_year - $birth_year;
+        if ($age > 18) {
+            return null;
+        }
+        return self::get_division_for_age(max($age, 0), $gender, $competition_year);
+    }
+
+    /**
+     * How age is determined, by context:
+     * - open / U20: age on the day of competition (Rule 141.1(a)-(b))
+     * - masters (track & field, race walk): age on the first day of the meet (141.1(d)(i))
+     * - masters_ldr: age on the day the race starts (341.4)
+     * - youth: year of birth (300.1(b))
+     */
+    public static function get_age_determination_rule(int $year, string $context = 'open'): string {
+        return match ($context) {
+            'youth' => 'year_of_birth',
+            'masters' => 'first_day_of_meet',
+            'masters_ldr' => 'race_start_day',
+            default => 'competition_day',
+        };
     }
 
     /**
