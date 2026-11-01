@@ -74,6 +74,8 @@ Insert the version-specific shortcode into a WordPress page:
 [pausatf_archive_release id="123"]
 ```
 
+Individual tables lead with the recorded name and mark; ranking tables lead with the name and place. Narrow screens wrap names and scroll the remaining context within the table. Keyboard users can focus the labelled table region and scroll horizontally.
+
 Public REST endpoints expose only published versions:
 
 ```text

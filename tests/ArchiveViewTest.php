@@ -108,6 +108,19 @@ final class ArchiveViewTest extends TestCase
         self::assertSame('Source', $this->cell($xpath, 'Rankings', 1, 'Origin'));
     }
 
+    public function testPrimaryResultsLeadTheirTablesAndScrollingRegionsAreKeyboardReachable(): void
+    {
+        $xpath = $this->render();
+        foreach (['Performances' => ['Name as recorded', 'Mark'], 'Rankings' => ['Name as recorded', 'Place']] as $caption => $headings) {
+            foreach ($headings as $index => $heading) {
+                self::assertSame($heading, $this->text($xpath, '//table[caption="' . $caption . '"]/thead/tr/th[' . ($index + 1) . ']'));
+            }
+            $regions = $this->nodes($xpath, '//table[caption="' . $caption . '"]/parent::div[@role="region" and @tabindex="0"]');
+            self::assertSame(1, $regions->length);
+            self::assertSame($caption, $regions->item(0)->getAttribute('aria-label'));
+        }
+    }
+
     public function testQualificationCaseAndUnknownVersusZeroWindRemainVisible(): void
     {
         $this->release['entities']['performances'][0]['qualifier_raw'] = 'Q';

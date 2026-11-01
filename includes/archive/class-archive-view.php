@@ -34,8 +34,8 @@ final class ArchiveView {
         unset($performance);
         $visible_map = array_column($visible, null, 'key');
         $out .= self::table(__('Performances', 'pausatf-results'), $visible, [
-            'event_label' => 'Event', 'division_label' => 'Division', 'round_label' => 'Round',
-            'athlete_name_raw' => 'Name as recorded', 'raw_mark' => 'Mark', 'status_raw' => 'Status',
+            'athlete_name_raw' => 'Name as recorded', 'raw_mark' => 'Mark',
+            'event_label' => 'Event', 'division_label' => 'Division', 'round_label' => 'Round', 'status_raw' => 'Status',
             'qualifier_raw' => 'Qualifier', 'wind' => 'Wind (m/s)', 'gun_time_raw' => 'Gun time', 'net_time_raw' => 'Net time',
             'seed_mark_raw' => 'Seed mark', 'lane' => 'Lane', 'bib' => 'Bib',
         ]);
@@ -45,7 +45,7 @@ final class ArchiveView {
             if (count($performances) > $page * 50) { $out .= '<a href="' . esc_url(add_query_arg('archive_result_page', $page + 1)) . '">' . self::escape(__('Next results', 'pausatf-results')) . '</a>'; }
             $out .= '</nav>';
         }
-        foreach (['rankings' => ['scope' => 'Ranking', 'published_place' => 'Place', 'origin_label' => 'Origin', 'calculation_version' => 'Calculation version', 'timing_basis' => 'Timing basis', 'age_grade_published' => 'Age grade', 'age_grade_table_version' => 'Age-grade table version'],
+        foreach (['rankings' => ['published_place' => 'Place', 'scope' => 'Ranking', 'origin_label' => 'Origin', 'calculation_version' => 'Calculation version', 'timing_basis' => 'Timing basis', 'age_grade_published' => 'Age grade', 'age_grade_table_version' => 'Age-grade table version'],
             'attempts' => ['attempt_order' => 'Attempt', 'height' => 'Height', 'mark_raw' => 'Mark', 'attempt_status_raw' => 'Attempt status'],
             'record_claims' => ['record_type_as_printed' => 'Record claim as printed', 'claimed_status' => 'Claimed status']] as $kind => $columns) {
             $rows = [];
@@ -56,7 +56,7 @@ final class ArchiveView {
                     $record['name'] = $names[$record['performance_key']]; $rows[] = $record;
                 }
             }
-            if ($rows !== []) { $out .= self::table(ucfirst(str_replace('_', ' ', $kind)), $rows, ['event_label' => 'Event', 'name' => 'Name as recorded'] + $columns); }
+            if ($rows !== []) { $out .= self::table(ucfirst(str_replace('_', ' ', $kind)), $rows, ['name' => 'Name as recorded'] + $columns + ['event_label' => 'Event']); }
         }
         foreach (['competitions', 'divisions', 'rounds', 'rulesets', 'teams', 'scores', 'result_releases'] as $kind) {
             if ($entities[$kind] === []) { continue; }
@@ -80,7 +80,7 @@ final class ArchiveView {
     }
 
     private static function table(string $caption, array $records, array $columns): string {
-        $out = '<div class="pausatf-archive-table"><table><caption>' . self::escape($caption) . '</caption><thead><tr>';
+        $out = '<div class="pausatf-archive-table" role="region" tabindex="0" aria-label="' . esc_attr($caption) . '"><table><caption>' . self::escape($caption) . '</caption><thead><tr>';
         foreach ($columns as $label) { $out .= '<th scope="col">' . self::escape($label) . '</th>'; }
         $out .= '</tr></thead><tbody>';
         foreach ($records as $record) {
