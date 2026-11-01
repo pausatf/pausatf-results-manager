@@ -16,6 +16,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once __DIR__ . '/class-grand-prix-scoring.php';
+
 /**
  * Ranking system for athletes
  */
@@ -102,39 +104,43 @@ class RankingSystem {
 
         $ranking_type = $season ? 'seasonal' : 'all_time';
 
-        // Build query to get best performances
-        $sql = "SELECT
-                    r.athlete_name,
-                    r.athlete_id,
-                    MIN(r.time_seconds) as best_time,
-                    r.time_display,
-                    r.id as result_id,
-                    e.post_title as event_name,
-                    pm.meta_value as event_date,
-                    COUNT(*) as race_count
-                FROM {$this->results_table} r
-                INNER JOIN {$wpdb->posts} e ON r.event_id = e.ID
-                LEFT JOIN {$wpdb->postmeta} pm ON e.ID = pm.post_id AND pm.meta_key = '_pausatf_event_date'
-                WHERE r.time_seconds IS NOT NULL
-                  AND r.time_seconds > 0
-                  AND r.division LIKE %s";
-
-        $params = ['%' . $division_code . '%'];
-
-        // Filter by event type (from post title or meta)
-        $sql .= " AND (e.post_title LIKE %s OR e.post_title LIKE %s)";
-        $params[] = '%' . $event . '%';
-        $params[] = '%' . str_replace('K', ' K', $event) . '%';
-
-        // Filter by season if specified
+        // One row per athlete: the row holding the best time, so the event, date and result id
+        // belong to that performance (MIN() with non-aggregated columns returned an arbitrary row).
+        [$event_pattern, $event_exclude] = self::event_title_filter($event);
+        $where = ["r.time_seconds IS NOT NULL", "r.time_seconds > 0", "e.post_title REGEXP %s"];
+        $params = [$event_pattern];
+        if ($event_exclude !== null) {
+            $where[] = "e.post_title NOT REGEXP %s";
+            $params[] = $event_exclude;
+        }
+        if ($gender === 'M' || $gender === 'F') {
+            $where[] = "r.sex = %s";
+            $params[] = $gender;
+        }
+        $division_pattern = self::division_filter($division_code);
+        if ($division_pattern !== null) {
+            $where[] = "r.division REGEXP %s";
+            $params[] = $division_pattern;
+        }
         if ($season) {
-            $sql .= " AND YEAR(pm.meta_value) = %d";
+            $where[] = "YEAR(pm.meta_value) = %d";
             $params[] = $season;
         }
 
-        $sql .= " GROUP BY r.athlete_name
-                  ORDER BY best_time ASC
-                  LIMIT 1000";
+        $sql = "SELECT athlete_name, athlete_id, best_time, time_display, result_id, event_name, event_date, race_count
+                FROM (
+                    SELECT r.athlete_name, r.athlete_id, r.time_seconds AS best_time, r.time_display, r.id AS result_id,
+                           e.post_title AS event_name, pm.meta_value AS event_date,
+                           ROW_NUMBER() OVER (PARTITION BY r.athlete_name ORDER BY r.time_seconds, pm.meta_value, r.id) AS best_row,
+                           COUNT(*) OVER (PARTITION BY r.athlete_name) AS race_count
+                    FROM {$this->results_table} r
+                    INNER JOIN {$wpdb->posts} e ON r.event_id = e.ID
+                    LEFT JOIN {$wpdb->postmeta} pm ON e.ID = pm.post_id AND pm.meta_key = '_pausatf_event_date'
+                    WHERE " . implode(' AND ', $where) . "
+                ) ranked
+                WHERE best_row = 1
+                ORDER BY best_time ASC, athlete_name ASC
+                LIMIT 1000";
 
         $results = $wpdb->get_results($wpdb->prepare($sql, ...$params), ARRAY_A);
 
@@ -153,10 +159,11 @@ class RankingSystem {
 
         $wpdb->delete($this->rankings_table, $delete_where);
 
-        // Insert new rankings
+        // Insert new rankings; equal best times share a rank.
+        $ranks = GrandPrixScoring::competition_ranks(array_map('floatval', array_column($results, 'best_time')));
         $rank = 0;
-        foreach ($results as $result) {
-            $rank++;
+        foreach ($results as $index => $result) {
+            $rank = $ranks[$index];
 
             $wpdb->insert($this->rankings_table, [
                 'ranking_type' => $ranking_type,
@@ -176,7 +183,39 @@ class RankingSystem {
             ]);
         }
 
-        return $rank;
+        return count($results);
+    }
+
+    /**
+     * MySQL REGEXP filters matching an event name as a whole token in an event title:
+     * "5K" must not match "15K" or "25K", and "Marathon" must not match "Half Marathon".
+     *
+     * @return array{0: string, 1: ?string} [include pattern, exclude pattern]
+     */
+    public static function event_title_filter(string $event): array {
+        $event = trim($event);
+        if (preg_match('/^(\d+(?:\.\d+)?)\s*K$/i', $event, $m) === 1) {
+            return ['(^|[^0-9.])' . preg_quote($m[1], '/') . ' ?[Kk]([^0-9A-Za-z]|$)', null];
+        }
+        if (preg_match('/^(\d+(?:\.\d+)?)\s*Miles?$/i', $event, $m) === 1) {
+            return ['(^|[^0-9.])' . preg_quote($m[1], '/') . '[ -]?[Mm]i(les?)?([^A-Za-z]|$)', null];
+        }
+        if (strcasecmp($event, 'Marathon') === 0) {
+            return ['(^|[^A-Za-z])[Mm]arathon', '[Hh]alf[ -]?[Mm]arathon'];
+        }
+        return ['(^|[^A-Za-z0-9])' . preg_quote($event, '/') . '([^A-Za-z0-9]|$)', null];
+    }
+
+    /**
+     * Division filter: the code must be a whole leading token ("M40" matches "M40" and
+     * "M40-44" but not "M45"); null means all divisions.
+     */
+    public static function division_filter(string $division_code): ?string {
+        $division_code = trim($division_code);
+        if ($division_code === '' || strcasecmp($division_code, 'all') === 0) {
+            return null;
+        }
+        return '^' . preg_quote($division_code, '/') . '([^0-9A-Za-z]|$)';
     }
 
     /**
@@ -438,7 +477,7 @@ class RankingSystem {
     /**
      * Regenerate all rankings
      */
-    public function regenerate_all(int $season = null): array {
+    public function regenerate_all(?int $season = null): array {
         $events = ['5K', '10K', '15K', '10 Miles', 'Half Marathon', 'Marathon'];
         $genders = ['M', 'F'];
         $divisions = ['OPEN', 'M40', 'M50', 'M60', 'M70', 'W40', 'W50', 'W60', 'W70'];
@@ -453,8 +492,9 @@ class RankingSystem {
 
                 // Division rankings
                 foreach ($divisions as $division) {
+                    // OPEN for both sexes; M* divisions for men, W* for women.
                     if (($gender === 'M' && strpos($division, 'W') === 0) ||
-                        ($gender === 'F' && strpos($division, 'M') === 0 && $division !== 'M40')) {
+                        ($gender === 'F' && strpos($division, 'M') === 0)) {
                         continue;
                     }
 
