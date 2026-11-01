@@ -12,9 +12,9 @@ use InvalidArgumentException;
 use Throwable;
 
 final class ArchiveCli {
-    /** Install additive tables. Requires --user=<administrator>. */
+    /** Install additive tables. Requires --user=<administrator>. Also available as `wp pausatf archive`. */
     public function install(array $args, array $options): void {
-        $this->run(static function (ArchiveWorkflow $workflow): array { $workflow->install(); return ['installed' => true]; });
+        $this->run('install', null, static function (ArchiveWorkflow $workflow): array { $workflow->install(); return ['installed' => true]; });
     }
 
     /**
@@ -29,7 +29,7 @@ final class ArchiveCli {
      * : Original file whose bytes match the bundle checksum.
      */
     public function stage(array $args, array $options): void {
-        $this->run(function (ArchiveWorkflow $workflow) use ($args, $options): array {
+        $this->run('stage', null, function (ArchiveWorkflow $workflow) use ($args, $options): array {
             $json = $this->file($args[0] ?? null, ArchiveBundle::MAX_JSON_BYTES);
             $id = $workflow->stage($json, $this->file($options['source'] ?? null, ArchiveBundle::MAX_SOURCE_BYTES), get_current_user_id());
             return ['id' => $id, 'bundle_sha256' => hash('sha256', $json), 'state' => $workflow->inspect($id)['state']];
@@ -51,7 +51,7 @@ final class ArchiveCli {
      * : Independently inspected original source file.
      */
     public function review(array $args, array $options): void {
-        $this->run(function (ArchiveWorkflow $workflow) use ($args, $options): array {
+        $this->run('review', ArchiveModule::id($args[0] ?? null), function (ArchiveWorkflow $workflow) use ($args, $options): array {
             $id = ArchiveModule::id($args[0] ?? null);
             $workflow->review($id, $this->file($options['report'] ?? null, ArchiveBundle::MAX_JSON_BYTES), $this->file($options['source'] ?? null, ArchiveBundle::MAX_SOURCE_BYTES), get_current_user_id());
             return ['id' => $id, 'state' => $workflow->inspect($id)['state']];
@@ -67,7 +67,7 @@ final class ArchiveCli {
      * : Verified candidate identifier.
      */
     public function publish(array $args, array $options): void {
-        $this->run(static function (ArchiveWorkflow $workflow) use ($args): array {
+        $this->run('publish', null, static function (ArchiveWorkflow $workflow) use ($args): array {
             $id = ArchiveModule::id($args[0] ?? null); $workflow->publish($id); return ['id' => $id, 'state' => 'published'];
         });
     }
@@ -81,7 +81,7 @@ final class ArchiveCli {
      * : Published release identifier.
      */
     public function withdraw(array $args, array $options): void {
-        $this->run(static function (ArchiveWorkflow $workflow) use ($args): array {
+        $this->run('withdraw', null, static function (ArchiveWorkflow $workflow) use ($args): array {
             $id = ArchiveModule::id($args[0] ?? null); $workflow->withdraw($id); return ['id' => $id, 'state' => 'withdrawn'];
         });
     }
@@ -95,7 +95,7 @@ final class ArchiveCli {
      * : Candidate identifier.
      */
     public function inspect(array $args, array $options): void {
-        $this->run(static function (ArchiveWorkflow $workflow) use ($args): array {
+        $this->run('inspect', null, static function (ArchiveWorkflow $workflow) use ($args): array {
             $row = $workflow->inspect(ArchiveModule::id($args[0] ?? null));
             if ($row === null) { throw new InvalidArgumentException('Archive candidate not found.'); }
             $bundle = json_decode($row['bundle_json'], true, 64, JSON_THROW_ON_ERROR);
@@ -105,8 +105,10 @@ final class ArchiveCli {
         });
     }
 
-    private function run(callable $operation): void {
-        if (!current_user_can('manage_options')) { \WP_CLI::error('Use --user with an existing WordPress administrator.'); }
+    private function run(string $action, ?int $id, callable $operation): void {
+        if (!ArchiveModule::action_allowed($action, $id)) {
+            \WP_CLI::error('Use --user with a WordPress user who holds the archive capability for this action (the producer of a release cannot verify it).');
+        }
         try { \WP_CLI::line(json_encode($operation(ArchiveModule::workflow()), JSON_THROW_ON_ERROR)); }
         catch (Throwable $error) {
             \WP_CLI::error($error instanceof InvalidArgumentException ? $error->getMessage() : 'Archive operation was not confirmed. Inspect state by artifact checksum before retrying.');

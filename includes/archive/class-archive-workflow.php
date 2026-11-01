@@ -13,7 +13,11 @@ use JsonException;
 use RuntimeException;
 
 final class ArchiveWorkflow {
-    public function __construct(private ArchiveDatabase $database) {}
+    /**
+     * @param (\Closure(string, int): void)|null $on_transition Called after a publish or withdraw has committed
+     *        and changed state ('published' | 'withdrawn', release id); never inside the transaction, never on a no-op.
+     */
+    public function __construct(private ArchiveDatabase $database, private ?\Closure $on_transition = null) {}
 
     public function install(): void {
         (new ArchiveSchema($this->database))->install();
@@ -115,7 +119,8 @@ final class ArchiveWorkflow {
 
     public function publish(int $id): void {
         $this->ready_for_write();
-        $this->database->transaction(function () use ($id): void {
+        $changed = false;
+        $this->database->transaction(function () use ($id, &$changed): void {
             $this->lock_contracts();
             $release = $this->locked_release($id);
             if ($release['state'] === 'published') { return; }
@@ -133,12 +138,15 @@ final class ArchiveWorkflow {
             if ($this->database->execute("UPDATE {$table} SET state = 'published', published_at = ? WHERE id = ? AND state = 'verified'", [gmdate('Y-m-d H:i:s'), $id]) !== 1) {
                 throw new RuntimeException('Publication was not confirmed.');
             }
+            $changed = true;
         });
+        if ($changed && $this->on_transition !== null) { ($this->on_transition)('published', $id); }
     }
 
     public function withdraw(int $id): void {
         $this->ready_for_write();
-        $this->database->transaction(function () use ($id): void {
+        $changed = false;
+        $this->database->transaction(function () use ($id, &$changed): void {
             $this->lock_contracts();
             $row = $this->locked_release($id);
             if ($row['state'] === 'withdrawn') { return; }
@@ -147,7 +155,9 @@ final class ArchiveWorkflow {
             if ($this->database->execute("UPDATE {$table} SET state = 'withdrawn' WHERE id = ? AND state = 'published'", [$id]) !== 1) {
                 throw new RuntimeException('Withdrawal was not confirmed.');
             }
+            $changed = true;
         });
+        if ($changed && $this->on_transition !== null) { ($this->on_transition)('withdrawn', $id); }
     }
 
     /** Private application method; callers must authorize before invoking it. */
@@ -221,6 +231,22 @@ final class ArchiveWorkflow {
             }, ArchiveBundle::records($bundle, $kind));
         }
         return $entities;
+    }
+
+    /**
+     * Published releases, newest first; listing metadata only (no bundle).
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function published_index(int $offset = 0, int $limit = 50): array {
+        if ($offset < 0 || $offset > 10000000 || $limit < 1 || $limit > 100) { throw new InvalidArgumentException('Invalid archive page.'); }
+        $table = $this->database->table('archive_releases');
+        return $this->database->rows("SELECT id, competition_key, bundle_sha256, source_url, published_at FROM {$table} WHERE state = 'published' ORDER BY published_at DESC, id DESC LIMIT ? OFFSET ?", [$limit, $offset]);
+    }
+
+    public function published_count(): int {
+        $table = $this->database->table('archive_releases');
+        return (int) ($this->database->rows("SELECT COUNT(*) AS n FROM {$table} WHERE state = 'published'")[0]['n'] ?? 0);
     }
 
     public function recent(int $offset = 0, int $limit = 25): array {

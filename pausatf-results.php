@@ -346,9 +346,12 @@ final class Plugin {
         require_once PAUSATF_RESULTS_DIR . 'includes/parsers/class-parser-word.php';
 
         // Archive candidates use their own review and publication boundary.
-        foreach (['bundle', 'review', 'database', 'schema', 'workflow', 'view', 'cli', 'module'] as $component) {
+        foreach (['bundle', 'review', 'database', 'schema', 'workflow', 'view', 'capabilities', 'cli', 'module'] as $component) {
             require_once PAUSATF_RESULTS_DIR . 'includes/archive/class-archive-' . $component . '.php';
         }
+        add_action('rest_api_init', static function (): void {
+            require_once PAUSATF_RESULTS_DIR . 'includes/archive/class-archive-rest-controller.php';
+        }, 0);
         Archive\ArchiveModule::register();
 
         // Load USATF rules engine (conditionally)

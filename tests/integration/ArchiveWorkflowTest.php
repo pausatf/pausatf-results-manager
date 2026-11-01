@@ -484,6 +484,42 @@ final class ArchiveWorkflowTest extends TestCase
         $this->rejectOperation(fn() => $this->workflow->publish($id));
     }
 
+    public function testTransitionsAreReportedOnceAfterCommitAndNeverForNoOpsOrFailures(): void
+    {
+        $events = [];
+        $states = [];
+        $workflow = new ArchiveWorkflow($this->database, function (string $state, int $id) use (&$events, &$states): void {
+            $events[] = [$state, $id];
+            // Listeners run after commit: the new state is already visible on the same connection.
+            $states[] = $this->workflow->inspect($id)['state'];
+        });
+        $id = $workflow->stage($this->json, $this->source, 10);
+        $this->rejectOperation(fn() => $workflow->publish($id));        // unverified: rejected, nothing reported
+        self::assertSame([], $events);
+        $workflow->review($id, $this->report($this->json), $this->source, 20);
+        $workflow->publish($id);
+        $workflow->publish($id);                                         // already published: no second event
+        $workflow->withdraw($id);
+        $workflow->withdraw($id);                                        // already withdrawn: no second event
+        self::assertSame([['published', $id], ['withdrawn', $id]], $events);
+        self::assertSame(['published', 'withdrawn'], $states);
+    }
+
+    public function testFailingTransitionListenerDoesNotUndoTheCommittedChange(): void
+    {
+        $workflow = new ArchiveWorkflow($this->database, static function (): void { throw new RuntimeException('listener failed'); });
+        $id = $workflow->stage($this->json, $this->source, 10);
+        $workflow->review($id, $this->report($this->json), $this->source, 20);
+        try {
+            $workflow->publish($id);
+            self::fail('The workflow passes listener failures to its caller (the WordPress module logs them).');
+        } catch (RuntimeException $error) {
+            self::assertSame('listener failed', $error->getMessage());
+        }
+        self::assertSame('published', $this->workflow->inspect($id)['state']);
+        self::assertNotNull($this->workflow->published($id));
+    }
+
     public function testPublishedArtifactTamperingIsDetected(): void
     {
         $id = $this->accept($this->json);

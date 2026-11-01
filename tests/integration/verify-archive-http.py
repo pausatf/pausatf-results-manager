@@ -143,7 +143,8 @@ def main():
     report = {'bundle_sha256': hashlib.sha256(bundle).hexdigest(), 'source_sha256': hashlib.sha256(source).hexdigest(), 'outcome': 'pass', 'evidence': 'Compared every annotated fixture field with the original two source lines; preserved distinct places and truncated names.', 'findings': [], 'checked_records': [kind + ':' + record['key'] for kind, records in parsed_bundle['entities'].items() for record in records]}
     self_review_fields = {'archive_action': 'review', 'release_id': str(identifier)}
     denied = submit(producer, form(producer, 'stage'), {'report': json.dumps(report).encode(), 'source': source}, self_review_fields)
-    check('Server rejects crafted self-review', denied[0] == 400)
+    # The capability layer (pausatf_archive_verify_release) refuses the producer before the workflow's own check.
+    check('Server rejects crafted self-review', denied[0] == 403)
     reviewed = submit(verifier, form(verifier, 'review', identifier), {'report': json.dumps(report).encode(), 'source': source})
     check('Independent review saved', reviewed[0] == 200 and 'notice=saved' in reviewed[1])
     check('Verified candidate still private', request(anonymous, public)[0] == 404)
