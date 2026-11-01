@@ -190,6 +190,8 @@ class USATFAgeDivisions {
 
     /**
      * Youth division for an athlete's year of birth (Rule 300.1(b)); null above 18.
+     *
+     * @return array<string, mixed>|null
      */
     public static function get_youth_division_for_birth_year(int $birth_year, int $competition_year, string $gender): ?array {
         $age = $competition_year - $birth_year;

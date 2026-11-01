@@ -258,6 +258,7 @@ class GrandPrix {
                     'gender' => $gender,
                     'results' => [],
                     'total_points' => 0,
+                    'races_completed' => 0,
                 ];
             }
 
