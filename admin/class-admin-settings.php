@@ -181,9 +181,8 @@ class AdminSettings {
             $ranking = new \PAUSATF\Results\RankingSystem();
             $year = (int) date('Y');
 
-            // Generate rankings for current year
-            $ranking->generate_rankings($year, 'overall', 'points');
-            $ranking->generate_age_graded_rankings($year, 'M');
+            // Generate every event/sex/division ranking for the current season.
+            $ranking->regenerate_all($year);
 
             wp_send_json_success([
                 'message' => sprintf(

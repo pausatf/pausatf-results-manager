@@ -35,6 +35,11 @@ class USATFChampionshipRules {
     ];
 
     /**
+     * Rule 7.3 team points for places 1-4.
+     */
+    private const TRACK_TEAM_POINTS = [5, 3, 2, 1];
+
+    /**
      * Association Championship rules (PA-USATF)
      */
     private const ASSOCIATION_RULES = [
@@ -43,7 +48,9 @@ class USATFChampionshipRules {
             'primary' => 'Must reside in association territory',
             'exception' => 'May compete for association where USATF club is registered',
         ],
-        'age_determination' => 'dec31', // Age as of December 31
+        // Rule 141.1: age on the day of competition; youth by year of birth (300.1(b)).
+        'age_determination' => 'competition_day',
+        'youth_age_determination' => 'year_of_birth',
         'awards' => [
             'individual' => [1, 2, 3], // Places awarded
             'age_group' => [1, 2, 3],
@@ -72,7 +79,7 @@ class USATFChampionshipRules {
             'scorers' => 5, // First 5 finishers score
             'max_team_size' => 7,
             'low_score_wins' => true,
-            'tiebreaker' => '6th_runner_place',
+            'tiebreaker' => 'last_scorer_place', // Rule 7.9(b): last scoring member nearer first
         ],
     ];
 
@@ -87,8 +94,9 @@ class USATFChampionshipRules {
         'course_requirements' => [
             'certified' => true,
             'record_eligible' => [
+                // Rule 265.4: point-to-point courses qualify within these limits.
                 'loop_course' => true,
-                'point_to_point' => false,
+                'point_to_point' => true,
                 'max_drop' => 1.0, // meter per km
                 'max_separation' => 50, // percent of distance
             ],
@@ -186,9 +194,10 @@ class USATFChampionshipRules {
                 return self::ROAD_RULES['team_scoring'];
 
             case 'track':
+                // Rule 7.3 default; a meet's entry information may set another table (Rule 7.1).
                 return [
-                    'scoring_places' => [10, 8, 6, 5, 4, 3, 2, 1],
-                    'relay_scoring' => [10, 8, 6, 5, 4, 3, 2, 1],
+                    'scoring_places' => self::TRACK_TEAM_POINTS,
+                    'relay_scoring' => self::TRACK_TEAM_POINTS,
                 ];
 
             default:
@@ -223,9 +232,14 @@ class USATFChampionshipRules {
 
     /**
      * Get track/field team score
+     *
+     * @param list<int> $points_by_place Points for places 1..n; defaults to Rule 7.3.
      */
-    public static function calculate_tf_team_score(array $results): int {
-        $scoring = [1 => 10, 2 => 8, 3 => 6, 4 => 5, 5 => 4, 6 => 3, 7 => 2, 8 => 1];
+    public static function calculate_tf_team_score(array $results, array $points_by_place = self::TRACK_TEAM_POINTS): int {
+        $scoring = [];
+        foreach (array_values($points_by_place) as $index => $points) {
+            $scoring[$index + 1] = (int) $points;
+        }
         $score = 0;
 
         foreach ($results as $result) {
