@@ -1,6 +1,8 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions"
+    cooldown:
+      default-days: 7
     directory: "/"
     schedule:
       interval: "weekly"
@@ -10,6 +12,8 @@ updates:
 
   # PHP (plugin dev tooling)
   - package-ecosystem: "composer"
+    cooldown:
+      default-days: 7
     directory: "/"
     schedule:
       interval: "weekly"
@@ -25,6 +29,8 @@ updates:
 
   # PHP (end-to-end test harness)
   - package-ecosystem: "composer"
+    cooldown:
+      default-days: 7
     directory: "/tests/e2e"
     schedule:
       interval: "weekly"
@@ -40,6 +46,8 @@ updates:
 
   # JavaScript build tooling
   - package-ecosystem: "npm"
+    cooldown:
+      default-days: 7
     directory: "/"
     # Revisit when use-memo-one supports React 19 and all lint plugins support ESLint 10.
     # Minor/patch version updates to the supported majors remain enabled.
@@ -64,6 +72,8 @@ updates:
 
   # Compose stack
   - package-ecosystem: "docker"
+    cooldown:
+      default-days: 7
     directory: "/"
     schedule:
       interval: "weekly"
@@ -79,6 +89,8 @@ updates:
 
   # End-to-end test image
   - package-ecosystem: "docker"
+    cooldown:
+      default-days: 7
     directory: "/tests/e2e"
     schedule:
       interval: "weekly"
