@@ -61,6 +61,8 @@ WordPress plugin to import, manage, and display PAUSATF (Pacific Association USA
 
 ## Usage
 
+For immutable archive candidates, independent verification and explicit publication, see the [archive context operator guide](docs/archive-context.md). Archive tables require explicit installation; this workflow preserves existing results tables.
+
 ### Shortcodes
 
 ```php
