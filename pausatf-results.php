@@ -167,7 +167,8 @@ final class Plugin {
                 'description' => $args['description'],
                 'single' => true,
                 'show_in_rest' => true,
-                'sanitize_callback' => $args['type'] === 'number' ? 'floatval' : 'sanitize_text_field',
+                // sanitize_meta() passes four arguments; internal floatval() accepts only one.
+                'sanitize_callback' => $args['type'] === 'number' ? static fn($value): float => (float) $value : 'sanitize_text_field',
                 'auth_callback' => static fn() => current_user_can('edit_posts'),
             ]);
         }
@@ -185,6 +186,40 @@ final class Plugin {
     }
 
     private function register_post_types(): void {
+        // PAUSATF Site's Events module owns pausatf_event when it is active: it
+        // registers the type on init priority 7, before this callback runs at 10.
+        // Defer to it so one plugin controls the rewrite slug and capabilities;
+        // the taxonomies and meta below attach to whichever registration exists.
+        // Its type omits custom-fields support, which REST needs to expose the
+        // meta registered in register_event_meta().
+        $owner = post_type_exists('pausatf_event') ? 'pausatf-site' : 'pausatf-results';
+        if ($owner === 'pausatf-site') {
+            add_post_type_support('pausatf_event', 'custom-fields');
+        } else {
+            $this->register_event_post_type();
+        }
+        // The owner decides the permalink base (/events/ or /results/). When it
+        // changes, rebuild rewrite rules once every plugin has added its own.
+        if (get_option('pausatf_results_event_type_owner') !== $owner) {
+            update_option('pausatf_results_event_type_owner', $owner, false);
+            add_action('wp_loaded', static fn() => flush_rewrite_rules(false));
+        }
+
+        register_post_type('pausatf_athlete', [
+            'labels' => [
+                'name' => __('Athletes', 'pausatf-results'),
+                'singular_name' => __('Athlete', 'pausatf-results'),
+            ],
+            'public' => true,
+            'has_archive' => true,
+            'rewrite' => ['slug' => 'athletes'],
+            'supports' => ['title', 'thumbnail', 'custom-fields'],
+            'menu_icon' => 'dashicons-groups',
+            'show_in_rest' => true,
+        ]);
+    }
+
+    private function register_event_post_type(): void {
         register_post_type('pausatf_event', [
             'labels' => [
                 'name' => __('Events', 'pausatf-results'),
@@ -200,19 +235,6 @@ final class Plugin {
             'rewrite' => ['slug' => 'results'],
             'supports' => ['title', 'editor', 'thumbnail', 'custom-fields'],
             'menu_icon' => 'dashicons-chart-line',
-            'show_in_rest' => true,
-        ]);
-
-        register_post_type('pausatf_athlete', [
-            'labels' => [
-                'name' => __('Athletes', 'pausatf-results'),
-                'singular_name' => __('Athlete', 'pausatf-results'),
-            ],
-            'public' => true,
-            'has_archive' => true,
-            'rewrite' => ['slug' => 'athletes'],
-            'supports' => ['title', 'thumbnail', 'custom-fields'],
-            'menu_icon' => 'dashicons-groups',
             'show_in_rest' => true,
         ]);
     }

@@ -39,6 +39,7 @@ $options = [
     'pausatf_strava_client_secret',
     'pausatf_garmin_consumer_key',
     'pausatf_garmin_consumer_secret',
+    'pausatf_results_event_type_owner',
 ];
 
 // Per-user metadata, including third-party OAuth tokens, must also be purged.

@@ -102,7 +102,64 @@ class CanonicalEventService {
             $fields['_pausatf_event_date'] = gmdate('Y-m-d', strtotime((string) $fields['_pausatf_start_datetime']));
         }
 
-        return array_map(static fn($value) => is_scalar($value) ? sanitize_text_field((string) $value) : '', $fields);
+        $fields = array_map(static fn($value) => is_scalar($value) ? sanitize_text_field((string) $value) : '', $fields);
+
+        return $fields + $this->site_event_meta($fields);
+    }
+
+    /**
+     * Date meta in PAUSATF Site's Events format, when that module is loaded.
+     *
+     * PAUSATF Site refuses to publish a pausatf_event without its own start
+     * and timezone meta, and its calendar reads those keys. It stores local
+     * times as 'Y-m-d H:i:s' with an IANA timezone name; a date-only record
+     * becomes an all-day event. Returns no keys when the module is absent, the
+     * site timezone is a non-zero UTC offset, or the start cannot be parsed.
+     * The event state is always written: on an update the site validates the
+     * stored value, and a missing one fails.
+     *
+     * @param array<string, string> $fields Sanitized Results Manager meta.
+     * @return array<string, string>
+     */
+    private function site_event_meta(array $fields): array {
+        if (
+            !function_exists('pausatf_events_site_timezone') || !function_exists('pausatf_events_sanitize_state')
+            || !defined('PAUSATF_EVENT_START_META') || !defined('PAUSATF_EVENT_END_META')
+            || !defined('PAUSATF_EVENT_ALL_DAY_META') || !defined('PAUSATF_EVENT_TIMEZONE_META')
+            || !defined('PAUSATF_EVENT_STATE_META')
+        ) {
+            return [];
+        }
+        $timezone = pausatf_events_site_timezone();
+        $start_raw = $fields['_pausatf_start_datetime'] !== '' ? $fields['_pausatf_start_datetime'] : ($fields['_pausatf_event_date'] ?? '');
+        if ($timezone === '' || $start_raw === '') {
+            return [];
+        }
+        $zone = new \DateTimeZone($timezone);
+        $all_day = (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $start_raw);
+        $local = static function (string $value) use ($zone): string {
+            try {
+                return (new \DateTimeImmutable($value, $zone))->setTimezone($zone)->format('Y-m-d H:i:s');
+            } catch (\Exception) {
+                return '';
+            }
+        };
+        $start = $local($start_raw);
+        if ($start === '') {
+            return [];
+        }
+        $end = $fields['_pausatf_end_datetime'] !== '' ? $local($fields['_pausatf_end_datetime']) : '';
+
+        return [
+            PAUSATF_EVENT_START_META => $start,
+            PAUSATF_EVENT_END_META => $end !== '' && $end >= $start ? $end : '',
+            PAUSATF_EVENT_ALL_DAY_META => $all_day ? '1' : '0',
+            PAUSATF_EVENT_TIMEZONE_META => $timezone,
+            // schema.org EventCancelled / EventPostponed, or a bare state name.
+            PAUSATF_EVENT_STATE_META => pausatf_events_sanitize_state(
+                preg_replace('/^event/', '', strtolower((string) preg_replace('#^.*/#', '', $fields['_pausatf_event_status'])))
+            ),
+        ];
     }
 
     private function set_taxonomies(int $event_id, array $record): void {
