@@ -167,7 +167,8 @@ final class Plugin {
                 'description' => $args['description'],
                 'single' => true,
                 'show_in_rest' => true,
-                'sanitize_callback' => $args['type'] === 'number' ? 'floatval' : 'sanitize_text_field',
+                // sanitize_meta() passes four arguments; internal floatval() accepts only one.
+                'sanitize_callback' => $args['type'] === 'number' ? static fn($value): float => (float) $value : 'sanitize_text_field',
                 'auth_callback' => static fn() => current_user_can('edit_posts'),
             ]);
         }
