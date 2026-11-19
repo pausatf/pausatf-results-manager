@@ -192,10 +192,17 @@ final class Plugin {
         // the taxonomies and meta below attach to whichever registration exists.
         // Its type omits custom-fields support, which REST needs to expose the
         // meta registered in register_event_meta().
-        if (post_type_exists('pausatf_event')) {
+        $owner = post_type_exists('pausatf_event') ? 'pausatf-site' : 'pausatf-results';
+        if ($owner === 'pausatf-site') {
             add_post_type_support('pausatf_event', 'custom-fields');
         } else {
             $this->register_event_post_type();
+        }
+        // The owner decides the permalink base (/events/ or /results/). When it
+        // changes, rebuild rewrite rules once every plugin has added its own.
+        if (get_option('pausatf_results_event_type_owner') !== $owner) {
+            update_option('pausatf_results_event_type_owner', $owner, false);
+            add_action('wp_loaded', static fn() => flush_rewrite_rules(false));
         }
 
         register_post_type('pausatf_athlete', [
