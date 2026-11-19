@@ -185,6 +185,33 @@ final class Plugin {
     }
 
     private function register_post_types(): void {
+        // PAUSATF Site's Events module owns pausatf_event when it is active: it
+        // registers the type on init priority 7, before this callback runs at 10.
+        // Defer to it so one plugin controls the rewrite slug and capabilities;
+        // the taxonomies and meta below attach to whichever registration exists.
+        // Its type omits custom-fields support, which REST needs to expose the
+        // meta registered in register_event_meta().
+        if (post_type_exists('pausatf_event')) {
+            add_post_type_support('pausatf_event', 'custom-fields');
+        } else {
+            $this->register_event_post_type();
+        }
+
+        register_post_type('pausatf_athlete', [
+            'labels' => [
+                'name' => __('Athletes', 'pausatf-results'),
+                'singular_name' => __('Athlete', 'pausatf-results'),
+            ],
+            'public' => true,
+            'has_archive' => true,
+            'rewrite' => ['slug' => 'athletes'],
+            'supports' => ['title', 'thumbnail', 'custom-fields'],
+            'menu_icon' => 'dashicons-groups',
+            'show_in_rest' => true,
+        ]);
+    }
+
+    private function register_event_post_type(): void {
         register_post_type('pausatf_event', [
             'labels' => [
                 'name' => __('Events', 'pausatf-results'),
@@ -200,19 +227,6 @@ final class Plugin {
             'rewrite' => ['slug' => 'results'],
             'supports' => ['title', 'editor', 'thumbnail', 'custom-fields'],
             'menu_icon' => 'dashicons-chart-line',
-            'show_in_rest' => true,
-        ]);
-
-        register_post_type('pausatf_athlete', [
-            'labels' => [
-                'name' => __('Athletes', 'pausatf-results'),
-                'singular_name' => __('Athlete', 'pausatf-results'),
-            ],
-            'public' => true,
-            'has_archive' => true,
-            'rewrite' => ['slug' => 'athletes'],
-            'supports' => ['title', 'thumbnail', 'custom-fields'],
-            'menu_icon' => 'dashicons-groups',
             'show_in_rest' => true,
         ]);
     }
