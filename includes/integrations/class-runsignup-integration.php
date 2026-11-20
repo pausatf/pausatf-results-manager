@@ -9,6 +9,7 @@
 
 namespace PAUSATF\Results\Integrations;
 
+use PAUSATF\Results\ListedSex;
 use PAUSATF\Results\PlacementTime;
 
 if (!defined('ABSPATH')) {
@@ -258,6 +259,7 @@ class RunSignUpIntegration {
                 'club' => $result['team_name'] ?? null,
                 'raw_data' => json_encode($result),
             ];
+            $data += ListedSex::columns($user['gender'] ?? $result['gender'] ?? null);
 
             // Determine division if not set
             if (empty($data['division']) && $data['athlete_age']) {

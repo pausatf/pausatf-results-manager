@@ -282,7 +282,7 @@ class CSVImporter {
         $data = array_merge($result, [
             'event_id' => $event_id,
             'raw_data' => json_encode($result),
-        ]);
+        ], ListedSex::columns(isset($result['sex']) ? (string) $result['sex'] : null));
 
         return (bool) $wpdb->insert($wpdb->prefix . 'pausatf_results', $data);
     }

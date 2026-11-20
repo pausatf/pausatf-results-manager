@@ -388,6 +388,7 @@ class ResultsImporter {
                 'pace' => $result['pace'] ?? null,
                 'raw_data' => json_encode($result),
             ];
+            $data += ListedSex::columns(isset($result['sex']) ? (string) $result['sex'] : null);
 
             // Try to link to existing athlete
             $athlete_id = $this->find_or_create_athlete($result);

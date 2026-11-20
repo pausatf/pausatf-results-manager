@@ -308,7 +308,7 @@ class ParserPre implements ParserInterface {
 
         // Extract division (M25-29, W40-44, etc.)
         if (preg_match('/\s([MWmw])(\d{2})-?(\d{2})?\s/', $line, $div_match)) {
-            $result['sex'] = strtoupper($div_match[1]);
+            $result['sex'] = $div_match[1]; // as printed; ListedSex maps it to a category
             $age_start = (int) $div_match[2];
             $result['division'] = $this->age_to_division($age_start);
         }

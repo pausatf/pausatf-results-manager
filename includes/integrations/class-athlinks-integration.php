@@ -9,6 +9,7 @@
 
 namespace PAUSATF\Results\Integrations;
 
+use PAUSATF\Results\ListedSex;
 use PAUSATF\Results\PlacementTime;
 
 if (!defined('ABSPATH')) {
@@ -173,7 +174,7 @@ class AthlinksIntegration {
                 'athlinks_race_id' => $result['raceId'],
                 'source' => 'athlinks',
             ]),
-        ];
+        ] + ListedSex::columns($result['gender'] ?? null);
 
         $table = $wpdb->prefix . 'pausatf_results';
         return (bool) $wpdb->insert($table, $data);

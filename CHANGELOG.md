@@ -39,6 +39,7 @@ Changes on `main` since 2.4.0, in merge order.
 
 - Placeholder age factors and an age-graded percentage that ignored the factor. (#115)
 - XC club team standings that depended on an unspecified MySQL variable ordering. (#116)
+- Sex as listed is stored by every importer. The legacy HTML importer (Import screen, sync, batch, `POST /import`), Hy-Tek, RunSignUp, Athlinks and the timing system importers dropped it, and the CSV importer wrote the printed value into the one-character `sex` column. All now write the category to `sex` and the printed value to `sex_listed` through `ListedSex`. The fixed-width parser no longer upper-cases the printed letter, and `USATFAgeDivisions::scoring_sex()` uses `ListedSex::category()`, so both accept MALE, WOMEN, GIRLS and the other spelled-out forms.
 
 ### CI and dependencies
 

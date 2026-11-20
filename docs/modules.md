@@ -73,10 +73,10 @@ Settings tabs:
 | --- | --- | --- | --- |
 | Legacy HTML by URL | Import screen, `POST /pausatf/v1/import`, the sync | `ResultsImporter` | Detects table, fixed-width and Word-generated HTML. Replaces the event's existing results. |
 | Scheduled sync and batch | `pausatf_results_sync`, `pausatf_batch_import` | `ResultsImporter` | Reads the file listing at `PAUSATF_LEGACY_SOURCE_URL`. |
-| Canonical event JSON | `POST /pausatf/v1/events/import`, the calendar command | `CanonicalEventService`, then `ResultsRepository` | Creates or updates the event by `event_uid`. Stores sex as listed and links athletes by source identifier. Sets PAUSATF Site's start, timezone and state keys when that module is loaded. |
+| Canonical event JSON | `POST /pausatf/v1/events/import`, the calendar command | `CanonicalEventService`, then `ResultsRepository` | Creates or updates the event by `event_uid`. Links athletes by source identifier. Sets PAUSATF Site's start, timezone and state keys when that module is loaded. |
 | CSV, Hy-Tek | Race Director Portal; code | `CSVImporter`, `HyTekImporter` | |
 | RunSignUp, Athlinks, timing systems | Code | Each class | Placement time follows the event's stated basis. |
-| UltraSignUp | Code | `UltraSignupImport` | Stores sex as listed. |
+| UltraSignUp | Code | `UltraSignupImport` | |
 
 All of them write the legacy `_pausatf_event_date`. Which of them keep sex as listed is in [classification-and-records.md](classification-and-records.md#sex-as-listed). The scheduled sync's and batch import's directory listing requests, and the Import screen's Analyze request, are made with TLS certificate verification turned off. `ResultsImporter::import_from_url()`, which fetches the result pages, uses WordPress's default verification.
 
