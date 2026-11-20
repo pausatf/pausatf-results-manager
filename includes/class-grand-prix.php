@@ -13,6 +13,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once __DIR__ . '/class-athlete-identity.php';
+
 require_once __DIR__ . '/class-grand-prix-scoring.php';
 
 /**
@@ -249,10 +251,13 @@ class GrandPrix {
         $athletes = [];
         foreach ($results as $result) {
             $gender = GrandPrixScoring::resolve_gender($result['sex'] ?? null, $result['division'] ?? null);
-            $key = $result['athlete_name'] . '|' . ($result['division'] ?? 'OPEN') . '|' . $gender;
+            // Same person across events by the site archive's identity, not by printed name.
+            $identity = AthleteIdentity::resolve((string) $result['athlete_name'], isset($result['athlete_id']) ? (int) $result['athlete_id'] : null);
+            $key = $identity['key'] . '|' . ($result['division'] ?? 'OPEN') . '|' . $gender;
             if (!isset($athletes[$key])) {
                 $athletes[$key] = [
                     'name' => $result['athlete_name'],
+                    'identity' => $identity,
                     'athlete_id' => $result['athlete_id'],
                     'division' => $result['division'] ?? 'OPEN',
                     'gender' => $gender,

@@ -49,6 +49,7 @@ class GrandPrixStandingsTest extends TestCase {
         global $wpdb;
         $this->db = new StandingsWpdbDouble();
         $wpdb = $this->db;
+        require_once __DIR__ . '/../includes/class-event-date.php';
         require_once __DIR__ . '/../includes/class-grand-prix.php';
         $this->db->series = [
             'id' => 7, 'place_points' => json_encode(\PAUSATF\Results\GrandPrixScoring::PA_ROAD_POINTS_A),
@@ -101,6 +102,20 @@ class GrandPrixStandingsTest extends TestCase {
         self::assertSame(3, $rows['A|M']['rank_position']);
         self::assertSame(0.0, (float) $rows['D|M']['total_points']);
         self::assertArrayHasKey('D|M', $rows, 'No PA rule sets a minimum number of races.');
+    }
+
+    public function test_two_printed_forms_of_one_archive_athlete_are_one_standing(): void {
+        require_once __DIR__ . '/fixtures/site-archive-doubles.php';
+        \PAUSATF\Results\AthleteIdentity::set_lookup(static fn(string $key): ?array =>
+            $key === 'russ-kiernan' ? ['athlete_key' => 'russ-kiernan', 'people' => []] : null);
+        try {
+            $this->db->results = [$this->row('Russ Kiernan', 'M', 1, 1), $this->row('Kiernan, Russ', 'M', 2, 1)];
+            $rows = $this->standings();
+        } finally {
+            \PAUSATF\Results\AthleteIdentity::reset();
+        }
+        self::assertCount(1, $rows);
+        self::assertSame(200.0, (float) reset($rows)['total_points']);
     }
 
     public function test_unlabelled_open_result_is_kept_as_unknown_sex(): void {
