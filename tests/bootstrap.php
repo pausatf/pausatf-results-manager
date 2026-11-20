@@ -21,6 +21,14 @@ if (!function_exists('add_shortcode')) {
     }
 }
 
+if (!function_exists('apply_filters')) {
+    // Tests set $GLOBALS['pausatf_test_filters'][$hook] to a callable to force a filter result.
+    function apply_filters(string $hook, $value, ...$args) {
+        $callback = $GLOBALS['pausatf_test_filters'][$hook] ?? null;
+        return $callback === null ? $value : $callback($value, ...$args);
+    }
+}
+
 if (!function_exists('add_action')) {
     function add_action(...$args): void {
     }

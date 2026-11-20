@@ -63,6 +63,8 @@ WordPress plugin to import, manage, and display PAUSATF (Pacific Association USA
 
 For immutable archive candidates, independent verification and explicit publication, see the [archive context operator guide](docs/archive-context.md). Archive tables require explicit installation; this workflow preserves existing results tables.
 
+When PAUSATF Site's Archive module is active, this plugin does not load its own archive (admin menu, `pausatf/v1/archive/*` REST routes, `pausatf_archive_release` shortcode, and `pausatf-results archive` CLI); PAUSATF Site serves `pausatf/v2` and `pausatf_archive`. Without it the bundled archive loads as before. The `pausatf_results_defer_archive_to_site` filter forces either behavior.
+
 ### Shortcodes
 
 ```php

@@ -36,6 +36,13 @@ cannot be lost by an accidental deletion.
 
 == Changelog ==
 
+= Unreleased =
+* The bundled results archive (admin menu, `pausatf/v1/archive/*` REST routes,
+  `pausatf_archive_release` shortcode, `pausatf-results archive` CLI) is not
+  loaded while PAUSATF Site's Archive module is active. The code remains until
+  production runs PAUSATF Site. Use the `pausatf_results_defer_archive_to_site`
+  filter to force either behavior.
+
 = 2.2.0 =
 * Security hardening for certificate/share-card generation; DOM-safe athlete
   search; TLS verification enabled on imports.
