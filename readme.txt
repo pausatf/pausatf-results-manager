@@ -4,7 +4,7 @@ Tags: results, athletics, track-and-field, race-results, importer
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.4
-Stable tag: 2.5.0
+Stable tag: 2.5.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -58,7 +58,7 @@ Schema changes run on the first wp-admin page load and delete nothing. Read docs
 
 == Changelog ==
 
-= Unreleased =
+= 2.5.1 =
 * Clear All Caches deletes only RM's own transients; PAUSATF Site's `pausatf_` transients are kept.
 * The records scan uses each result's stored sex; a sex other than M or F is never matched against men's or women's records.
 * The `record.approved` webhook event now fires when a pending record is approved.

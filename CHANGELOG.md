@@ -1,8 +1,8 @@
 # Changelog
 
-This file follows the [Keep a Changelog](https://keepachangelog.com/) layout. Pull request numbers refer to the `pausatf/pausatf-results-manager` repository. Upgrade steps for 2.5.0 are in [docs/upgrading.md](docs/upgrading.md). History before 2.4.0 is in the git log and the version tags.
+This file follows the [Keep a Changelog](https://keepachangelog.com/) layout. Pull request numbers refer to the `pausatf/pausatf-results-manager` repository. Upgrade steps are in [docs/upgrading.md](docs/upgrading.md). History before 2.4.0 is in the git log and the version tags.
 
-## Unreleased
+## 2.5.1 - 2026-11-20
 
 ### Fixed
 
