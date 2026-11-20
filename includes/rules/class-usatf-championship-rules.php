@@ -100,7 +100,7 @@ class USATFChampionshipRules {
                 'loop_course' => true,
                 'point_to_point' => true,
                 'max_drop' => USATFCompetitionRules::ROAD_RECORD_MAX_DROP_PER_KM, // meter per km
-                'max_separation' => (int) (USATFCompetitionRules::ROAD_RECORD_MAX_SEPARATION * 100), // percent of distance
+                'max_separation' => USATFCompetitionRules::ROAD_RECORD_MAX_SEPARATION_PERCENT, // percent of distance
             ],
         ],
         'team_scoring' => [

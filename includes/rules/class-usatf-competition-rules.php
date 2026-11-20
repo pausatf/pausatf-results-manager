@@ -26,6 +26,8 @@ class USATFCompetitionRules {
      */
     public const ROAD_RECORD_MAX_DROP_PER_KM = 1.0;
     public const ROAD_RECORD_MAX_SEPARATION = 0.5;
+    // The same limit as a whole percentage; PHP 8.4 does not allow casts in constant expressions.
+    public const ROAD_RECORD_MAX_SEPARATION_PERCENT = 50;
 
     /**
      * Wind rules per USATF Rule 184

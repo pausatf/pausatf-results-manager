@@ -39,6 +39,7 @@ class RoadRecordCourseTest extends TestCase {
         $eligible = USATFChampionshipRules::get_rules('road_championships', 2026)['course_requirements']['record_eligible'];
 
         self::assertSame(USATFCompetitionRules::ROAD_RECORD_MAX_DROP_PER_KM, $eligible['max_drop']);
-        self::assertSame((int) (USATFCompetitionRules::ROAD_RECORD_MAX_SEPARATION * 100), $eligible['max_separation']);
+        self::assertSame(USATFCompetitionRules::ROAD_RECORD_MAX_SEPARATION_PERCENT, $eligible['max_separation']);
+        self::assertSame((int) round(USATFCompetitionRules::ROAD_RECORD_MAX_SEPARATION * 100), USATFCompetitionRules::ROAD_RECORD_MAX_SEPARATION_PERCENT);
     }
 }
