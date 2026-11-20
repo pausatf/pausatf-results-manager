@@ -123,19 +123,19 @@ class RankingSystem {
             $params[] = $division_pattern;
         }
         if ($season) {
-            $where[] = "YEAR(pm.meta_value) = %d";
+            $where[] = "YEAR(" . EventDate::sql_expr('pm') . ") = %d";
             $params[] = $season;
         }
 
         $sql = "SELECT athlete_name, athlete_id, best_time, time_display, result_id, event_name, event_date, race_count
                 FROM (
                     SELECT r.athlete_name, r.athlete_id, r.time_seconds AS best_time, r.time_display, r.id AS result_id,
-                           e.post_title AS event_name, pm.meta_value AS event_date,
-                           ROW_NUMBER() OVER (PARTITION BY r.athlete_name ORDER BY r.time_seconds, pm.meta_value, r.id) AS best_row,
+                           e.post_title AS event_name, " . EventDate::sql_expr('pm') . " AS event_date,
+                           ROW_NUMBER() OVER (PARTITION BY r.athlete_name ORDER BY r.time_seconds, " . EventDate::sql_expr('pm') . ", r.id) AS best_row,
                            COUNT(*) OVER (PARTITION BY r.athlete_name) AS race_count
                     FROM {$this->results_table} r
                     INNER JOIN {$wpdb->posts} e ON r.event_id = e.ID
-                    LEFT JOIN {$wpdb->postmeta} pm ON e.ID = pm.post_id AND pm.meta_key = '_pausatf_event_date'
+                    " . EventDate::sql_join('e.ID', 'pm') . "
                     WHERE " . implode(' AND ', $where) . "
                 ) ranked
                 WHERE best_row = 1
@@ -238,10 +238,10 @@ class RankingSystem {
         // Get all performances with age
         $sql = "SELECT
                     r.*,
-                    pm.meta_value as event_date
+                    " . EventDate::sql_expr('pm') . " as event_date
                 FROM {$this->results_table} r
                 INNER JOIN {$wpdb->posts} e ON r.event_id = e.ID
-                LEFT JOIN {$wpdb->postmeta} pm ON e.ID = pm.post_id AND pm.meta_key = '_pausatf_event_date'
+                " . EventDate::sql_join('e.ID', 'pm') . "
                 WHERE r.time_seconds IS NOT NULL
                   AND r.time_seconds > 0
                   AND r.athlete_age IS NOT NULL
@@ -250,7 +250,7 @@ class RankingSystem {
         $params = ['%' . $event . '%', '%' . str_replace('K', ' K', $event) . '%'];
 
         if ($season) {
-            $sql .= " AND YEAR(pm.meta_value) = %d";
+            $sql .= " AND YEAR(" . EventDate::sql_expr('pm') . ") = %d";
             $params[] = $season;
         }
 

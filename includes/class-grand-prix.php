@@ -192,12 +192,12 @@ class GrandPrix {
         $events_table = $wpdb->prefix . 'pausatf_grand_prix_events';
 
         return $wpdb->get_results($wpdb->prepare(
-            "SELECT gpe.*, p.post_title as event_name, pm.meta_value as event_date
+            "SELECT gpe.*, p.post_title as event_name, " . EventDate::sql_expr('pm') . " as event_date
              FROM {$events_table} gpe
              INNER JOIN {$wpdb->posts} p ON gpe.event_id = p.ID
-             LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_pausatf_event_date'
+             " . EventDate::sql_join('p.ID', 'pm') . "
              WHERE gpe.series_id = %d
-             ORDER BY gpe.event_order, pm.meta_value",
+             ORDER BY gpe.event_order, " . EventDate::sql_expr('pm'),
             $series_id
         ), ARRAY_A);
     }

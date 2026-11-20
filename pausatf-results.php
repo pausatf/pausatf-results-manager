@@ -390,6 +390,8 @@ final class Plugin {
         }
 
         // Load core classes (always required)
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-event-date.php';
+        EventDate::register();
         require_once PAUSATF_RESULTS_DIR . 'includes/class-results-importer.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/storage/class-results-repository.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-canonical-event-service.php';

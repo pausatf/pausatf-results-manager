@@ -214,9 +214,6 @@ class FrontendDisplay {
         $args = [
             'post_type' => 'pausatf_event',
             'posts_per_page' => $atts['limit'],
-            'meta_key' => '_pausatf_event_date',
-            'orderby' => 'meta_value',
-            'order' => 'DESC',
         ];
 
         if ($atts['type']) {
@@ -229,14 +226,15 @@ class FrontendDisplay {
             ];
         }
 
-        $events = get_posts($args);
+        /** @var \WP_Post[] $events */
+        $events = get_posts(EventDate::order_query($args));
 
         ob_start();
         ?>
         <div class="pausatf-recent-results">
             <ul class="pausatf-event-list">
                 <?php foreach ($events as $event) :
-                    $date = get_post_meta($event->ID, '_pausatf_event_date', true);
+                    $date = EventDate::get((int) $event->ID);
                     $count = get_post_meta($event->ID, '_pausatf_result_count', true);
                     ?>
                     <li class="pausatf-event-item">
@@ -244,7 +242,7 @@ class FrontendDisplay {
                             <strong><?php echo esc_html($event->post_title); ?></strong>
                         </a>
                         <span class="pausatf-event-meta">
-                            <?php echo $date ? date('M j, Y', strtotime($date)) : ''; ?>
+                            <?php $timestamp = $date !== '' ? strtotime($date) : false; echo $timestamp !== false ? esc_html(date('M j, Y', $timestamp)) : ''; ?>
                             <?php if ($count) : ?>
                                 &bull; <?php echo number_format($count); ?> results
                             <?php endif; ?>

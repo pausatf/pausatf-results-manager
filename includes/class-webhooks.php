@@ -392,7 +392,7 @@ class Webhooks {
             'event_id' => $event_id,
             'event_name' => $event ? $event->post_title : '',
             'results_count' => $count,
-            'event_date' => get_post_meta($event_id, '_pausatf_event_date', true),
+            'event_date' => EventDate::get((int) $event_id),
         ]);
     }
 
@@ -406,7 +406,7 @@ class Webhooks {
         $this->trigger($event, [
             'event_id' => $post_id,
             'event_name' => $post->post_title,
-            'event_date' => get_post_meta($post_id, '_pausatf_event_date', true),
+            'event_date' => EventDate::get((int) $post_id),
             'event_location' => get_post_meta($post_id, '_pausatf_event_location', true),
         ]);
     }

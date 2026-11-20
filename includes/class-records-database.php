@@ -509,7 +509,7 @@ class RecordsDatabase {
         $results_table = $wpdb->prefix . 'pausatf_results';
 
         // Get event details
-        $event_date = get_post_meta($event_id, '_pausatf_event_date', true);
+        $event_date = EventDate::get((int) $event_id);
         $event_location = get_post_meta($event_id, '_pausatf_event_location', true);
         $event_name = get_the_title($event_id);
 

@@ -227,7 +227,7 @@ class GraphQLAPI {
             'id' => $event->ID,
             'name' => $event->post_title,
             'slug' => $event->post_name,
-            'date' => get_post_meta($event->ID, '_pausatf_event_date', true),
+            'date' => EventDate::get((int) $event->ID),
             'location' => get_post_meta($event->ID, '_pausatf_event_location', true),
             'type' => !empty($types) ? $types[0] : null,
             'season' => !empty($seasons) ? $seasons[0] : null,

@@ -73,7 +73,7 @@ class Certificates {
         }
 
         // Get event details
-        $event_date = get_post_meta($result['event_id'], '_pausatf_event_date', true);
+        $event_date = EventDate::get((int) $result['event_id']);
         $event_location = get_post_meta($result['event_id'], '_pausatf_event_location', true);
 
         // Generate HTML for certificate
@@ -291,7 +291,7 @@ class Certificates {
         $dimensions = $this->get_platform_dimensions($platform);
 
         // Get event details
-        $event_date = get_post_meta($result['event_id'], '_pausatf_event_date', true);
+        $event_date = EventDate::get((int) $result['event_id']);
 
         // Create image using GD
         return $this->create_share_image($result, $dimensions, [
