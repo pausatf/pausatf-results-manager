@@ -38,6 +38,7 @@ Changes on `main` since 2.4.0, in merge order.
 ### Fixed
 
 - Placeholder age factors and an age-graded percentage that ignored the factor. (#115)
+- **Delete All Data** empties exactly the tables RM creates, including the Grand Prix series and standings, `pausatf_pending_records` and the webhook log, and no longer tries table names RM never creates. It deletes event posts only while RM owns the `pausatf_event` type, so it never deletes PAUSATF Site's events, and it deletes only RM's own transients. See [docs/modules.md](docs/modules.md).
 - XC club team standings that depended on an unspecified MySQL variable ordering. (#116)
 
 ### CI and dependencies

@@ -318,6 +318,27 @@ class AdminSettings {
     }
 
     /**
+     * Tables that hold RM's results data, as the installers create them. The bundled
+     * archive tables are left out because PAUSATF Site's Archive uses the same
+     * pausatf_archive_ prefix, and the retired sanctions tables are kept by design.
+     */
+    public const DATA_TABLES = [
+        'pausatf_results',
+        'pausatf_imports',
+        'pausatf_records',
+        'pausatf_pending_records',
+        'pausatf_rankings',
+        'pausatf_grand_prix_series',
+        'pausatf_grand_prix_events',
+        'pausatf_grand_prix_standings',
+        'pausatf_webhooks',
+        'pausatf_webhook_logs',
+    ];
+
+    /** Transients RM sets (USATF membership lookups, certificate rate limits). PAUSATF Site also uses pausatf_ transients. */
+    public const TRANSIENT_PREFIXES = ['pausatf_usatf_', 'pausatf_cert_gen_'];
+
+    /**
      * Delete all data
      */
     public static function ajax_delete_all(): void {
@@ -325,62 +346,59 @@ class AdminSettings {
             return;
         }
 
-        global $wpdb;
-
-        // Delete all results
-        $table_results = $wpdb->prefix . 'pausatf_results';
-        $wpdb->query("TRUNCATE TABLE $table_results");
-
-        // Delete all imports
-        $table_imports = $wpdb->prefix . 'pausatf_imports';
-        $wpdb->query("TRUNCATE TABLE $table_imports");
-
-        // Delete events
-        $events = get_posts([
-            'post_type' => 'pausatf_event',
-            'posts_per_page' => -1,
-            'fields' => 'ids',
-        ]);
-
-        foreach ($events as $event_id) {
-            wp_delete_post($event_id, true);
-        }
-
-        // Delete athletes
-        $athletes = get_posts([
-            'post_type' => 'pausatf_athlete',
-            'posts_per_page' => -1,
-            'fields' => 'ids',
-        ]);
-
-        foreach ($athletes as $athlete_id) {
-            wp_delete_post($athlete_id, true);
-        }
-
-        // Clear feature-specific tables
-        $feature_tables = [
-            'pausatf_records',
-            'pausatf_rankings',
-            'pausatf_grand_prix',
-            'pausatf_grand_prix_events',
-            'pausatf_grand_prix_points',
-            'pausatf_webhooks',
-            'pausatf_webhook_deliveries',
-        ];
-
-        foreach ($feature_tables as $table) {
-            $full_table = $wpdb->prefix . $table;
-            if ($wpdb->get_var("SHOW TABLES LIKE '$full_table'") === $full_table) {
-                $wpdb->query("TRUNCATE TABLE $full_table");
-            }
-        }
-
-        // Clear caches
-        self::ajax_clear_cache();
+        self::delete_all_data();
 
         wp_send_json_success([
             'message' => __('All results data has been deleted.', 'pausatf-results'),
         ]);
+    }
+
+    /**
+     * Empty RM's data tables and delete the posts and transients RM owns.
+     *
+     * Event posts are deleted only while RM owns the pausatf_event type. When PAUSATF
+     * Site's Events module owns it (see Plugin::register_post_types()), the events are
+     * the site's and are left alone, as is an install that has not recorded an owner.
+     *
+     * @return array{tables: list<string>, post_types: list<string>} What was emptied.
+     */
+    public static function delete_all_data(): array {
+        global $wpdb;
+
+        $tables = [];
+        foreach (self::DATA_TABLES as $table) {
+            $full_table = $wpdb->prefix . $table;
+            if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($full_table))) === $full_table) {
+                $wpdb->query("TRUNCATE TABLE `{$full_table}`");
+                $tables[] = $table;
+            }
+        }
+
+        $post_types = ['pausatf_athlete', 'pausatf_claim'];
+        if (get_option('pausatf_results_event_type_owner') === 'pausatf-results') {
+            $post_types[] = 'pausatf_event';
+        }
+        foreach ($post_types as $post_type) {
+            $ids = get_posts([
+                'post_type' => $post_type,
+                'post_status' => 'any',
+                'posts_per_page' => -1,
+                'fields' => 'ids',
+            ]);
+            foreach ($ids as $id) {
+                wp_delete_post($id, true);
+            }
+        }
+
+        foreach (self::TRANSIENT_PREFIXES as $prefix) {
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+                $wpdb->esc_like('_transient_' . $prefix) . '%',
+                $wpdb->esc_like('_transient_timeout_' . $prefix) . '%'
+            ));
+        }
+
+        return ['tables' => $tables, 'post_types' => $post_types];
     }
 }
 
