@@ -6,8 +6,8 @@
  * in LDR non-championship races held partly or entirely outside the stadium, the Games
  * Committee may use net times, gun times or a combination for times, places and awards,
  * provided the entry materials say which. Net time is the finish transponder time minus
- * the start transponder time. Rule 165.4 makes gun time the default, so an event that
- * states nothing places by gun time.
+ * the start transponder time. The rules set no default for an event that states nothing;
+ * RM places such an event by gun time, the time every race records.
  *
  * Official times outside the stadium are converted to the next longer whole second
  * (Rule 165.11(c)); hand times are rounded up the same way (Rule 165.7).
