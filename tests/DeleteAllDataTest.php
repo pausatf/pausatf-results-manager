@@ -179,11 +179,10 @@ namespace PAUSATF\Results\Tests {
                 }
                 /** Applies the LIKE patterns of a DELETE to $rows. */
                 public function query(string $sql) {
-                    $matches = [];
-                    if (preg_match_all("/option_name LIKE '([^']+)'/", $sql, $matches) < 1) {
-                        return 0;
-                    }
-                    foreach ($matches[1] as $like) {
+                    $parts = explode("option_name LIKE '", $sql);
+                    array_shift($parts);
+                    foreach ($parts as $part) {
+                        $like = (string) strstr($part, "'", true);
                         $regex = '/^' . str_replace('%', '.*', preg_quote(stripslashes($like), '/')) . '$/';
                         $this->rows = array_values(array_filter(
                             $this->rows,
