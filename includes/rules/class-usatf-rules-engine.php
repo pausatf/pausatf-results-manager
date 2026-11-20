@@ -58,10 +58,11 @@ class USATFRulesEngine {
     }
 
     /**
-     * Get age division for a given age
+     * Age division for an age and listed sex; null when the sex has no scoring category.
+     * $discipline selects the Rule 141.1 open and masters ages (see USATFAgeDivisions::AGE_RULES).
      */
-    public function get_division_for_age(int $age, string $gender = 'M'): ?array {
-        return USATFAgeDivisions::get_division_for_age($age, $gender, $this->rules_year);
+    public function get_division_for_age(int $age, string $gender, string $discipline = 'track_field'): ?array {
+        return USATFAgeDivisions::get_division_for_age($age, $gender, $this->rules_year, $discipline);
     }
 
     /**
@@ -86,8 +87,9 @@ class USATFRulesEngine {
     }
 
     /**
-     * Calculate competition age per USATF Rule 141
-     * Age as of December 31 of the competition year
+     * Youth competition age: the age reached by December 31 of the competition year
+     * (Rule 300.1(b)). Open, U20 and masters ages are taken on a date instead; see
+     * USATFAgeDivisions::age_on() and AGE_RULES.
      */
     public function calculate_competition_age(\DateTime $birth_date, int $competition_year = null): int {
         $competition_year = $competition_year ?? $this->rules_year;
@@ -130,8 +132,8 @@ class USATFRulesEngine {
     /**
      * Get all applicable divisions for an athlete
      */
-    public function get_eligible_divisions(int $age, string $gender): array {
-        return USATFAgeDivisions::get_eligible_divisions($age, $gender, $this->rules_year);
+    public function get_eligible_divisions(int $age, string $gender, string $discipline = 'track_field'): array {
+        return USATFAgeDivisions::get_eligible_divisions($age, $gender, $this->rules_year, $discipline);
     }
 
     /**
