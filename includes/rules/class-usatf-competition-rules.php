@@ -18,6 +18,18 @@ if (!defined('ABSPATH')) {
  */
 class USATFCompetitionRules {
     /**
+     * Road record course limits, 2026 USATF Competition Rules, Rule 265.4 (p. 158-159):
+     * (a) the net drop from start to finish is at most 1 part per thousand, i.e. 1 m per km;
+     * (b) start and finish are at most 50% of the race distance apart in a straight line.
+     * World Athletics Competition Rule 31 sets the same two limits. Point-to-point courses
+     * that meet both are record-eligible; the limits govern records only, not certification.
+     */
+    public const ROAD_RECORD_MAX_DROP_PER_KM = 1.0;
+    public const ROAD_RECORD_MAX_SEPARATION = 0.5;
+    // The same limit as a whole percentage; PHP 8.4 does not allow casts in constant expressions.
+    public const ROAD_RECORD_MAX_SEPARATION_PERCENT = 50;
+
+    /**
      * Wind rules per USATF Rule 184
      */
     private const WIND_RULES = [
@@ -157,15 +169,32 @@ class USATFCompetitionRules {
             'course_measurement' => [
                 'method' => 'calibrated_bicycle',
                 'tolerance' => 0.001, // 0.1% short allowed, must not be long
-                'separation_from_start' => 0.5, // max 50% of race distance for point-to-point
-                'drop_per_km' => 1.0, // max 1m per km net downhill
             ],
             'record_eligibility' => [
-                'point_to_point' => false, // Loop/out-and-back required for records
-                'net_downhill' => false, // Cannot exceed 1m/km
-                'wind_assisted' => false, // Following wind limits apply
+                'point_to_point' => true,
+                'max_drop_per_km' => self::ROAD_RECORD_MAX_DROP_PER_KM,
+                'max_separation' => self::ROAD_RECORD_MAX_SEPARATION,
+                // Rule 265.5: except race walking and Masters, women's road records are
+                // kept separately for women-only and mixed races.
+                'women_only_and_mixed_separate' => true,
             ],
         ];
+    }
+
+    /**
+     * Whether a road course meets the Rule 265.4 record limits. A net climb (negative
+     * drop) always passes the drop limit; both limits are inclusive.
+     *
+     * @param float $distance_m   Race distance in metres.
+     * @param float $separation_m Straight-line distance between start and finish in metres.
+     * @param float $net_drop_m   Start elevation minus finish elevation in metres.
+     */
+    public static function road_course_meets_record_limits(float $distance_m, float $separation_m, float $net_drop_m): bool {
+        if ($distance_m <= 0 || $separation_m < 0) {
+            return false;
+        }
+        return $separation_m <= $distance_m * self::ROAD_RECORD_MAX_SEPARATION
+            && $net_drop_m <= ($distance_m / 1000) * self::ROAD_RECORD_MAX_DROP_PER_KM;
     }
 
     /**
