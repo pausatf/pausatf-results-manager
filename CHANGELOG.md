@@ -8,6 +8,7 @@ Changes on `main` since 2.4.0, in merge order.
 
 ### Added
 
+- The Import screen's **Upload HTML File** form now imports the page. It had no handler. It accepts one `.html` or `.htm` file up to 10 MB, checks the nonce and `manage_options`, and parses through `ResultsImporter` like a URL import.
 - Grand Prix standings for the PA 2026 road, cross country and MUT rules. Series gain `ruleset` and `series_part`, series events gain `team_multiplier`, `is_championship` and `distance_m`, and standings gain `athlete_key`, `entry_type`, `standing_type` and `verified`. Series without a ruleset keep the earlier scoring. See [docs/grand-prix.md](docs/grand-prix.md). (#118)
 - Athlete identity through PAUSATF Site's Archive, with a fallback to RM's athlete post and then a normalized name. See [docs/athlete-identity.md](docs/athlete-identity.md). (#117)
 - Cross country team scoring after the PA Cross Country Rules updated 3/1/26: divisions, displacers, B teams, short teams and tie-breaks. (#116)

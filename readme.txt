@@ -70,6 +70,7 @@ Schema changes run on the first wp-admin page load and delete nothing. Read docs
 * Athlete identity resolves through PAUSATF Site's Archive, with a fallback.
 * Grand Prix standings for the PA 2026 road, cross country and MUT rules, with a `ruleset` column on series.
 * The bundled results archive (admin menu, `pausatf/v1/archive/*` REST routes, `pausatf_archive_release` shortcode, `pausatf-results archive` CLI) is not loaded while PAUSATF Site's Archive module is active. Use the `pausatf_results_defer_archive_to_site` filter to force either behavior.
+* The Import screen's Upload HTML File form imports the page; it had no handler before.
 
 = 2.4.0 =
 * Defers the `pausatf_event` post type to PAUSATF Site when its Events module is active, and keeps canonical event imports publishable.

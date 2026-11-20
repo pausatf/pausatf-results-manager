@@ -49,6 +49,31 @@ if (isset($_POST['pausatf_batch_import']) && wp_verify_nonce($_POST['_wpnonce'] 
     }
 }
 
+// Handle HTML file upload
+if (isset($_POST['pausatf_upload_file']) && wp_verify_nonce($_POST['_wpnonce'] ?? '', 'pausatf_import')) {
+    $uploaded = $_FILES['results_file'] ?? [];
+    if (!current_user_can('manage_options')) {
+        $result = ['success' => false, 'error' => __('Permission denied.', 'pausatf-results')];
+    } elseif (($uploaded['error'] ?? null) === UPLOAD_ERR_OK && !is_uploaded_file($uploaded['tmp_name'] ?? '')) {
+        $result = ['success' => false, 'error' => __('No file was uploaded.', 'pausatf-results')];
+    } else {
+        $result = \PAUSATF\Results\Admin\AdminImport::import_html_upload($uploaded);
+    }
+
+    if ($result['success']) {
+        $message = sprintf(
+            __('Successfully imported %d results from "%s"', 'pausatf-results'),
+            $result['records_imported'],
+            $result['event_name'] ?: 'Unknown Event'
+        );
+        $message_type = 'success';
+    } else {
+        $error = $result['error'] ?? implode('; ', array_map('strval', (array) ($result['errors'] ?? [])));
+        $message = __('Import failed: ', 'pausatf-results') . ($error !== '' ? $error : 'Unknown error');
+        $message_type = 'error';
+    }
+}
+
 // Handle URL analysis
 $analysis = null;
 if (isset($_POST['pausatf_analyze_url']) && wp_verify_nonce($_POST['_wpnonce'] ?? '', 'pausatf_import')) {
