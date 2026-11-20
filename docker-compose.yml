@@ -41,7 +41,7 @@ services:
 
   # MySQL database
   db:
-    image: mysql:8.0
+    image: mysql:26.10
     container_name: pausatf_db
     environment:
       MYSQL_DATABASE: wordpress
