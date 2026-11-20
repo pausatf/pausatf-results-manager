@@ -412,11 +412,13 @@ class AthleteDashboard {
         $prs = $this->get_athlete_prs($athlete_id);
 
         // Get rankings
+        [$visible, $visible_params] = AgeGrading::rankings_where();
         $rankings = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM {$rankings_table}
-             WHERE athlete_id = %d
+             WHERE athlete_id = %d AND {$visible}
              ORDER BY rank_position ASC",
-            $athlete_id
+            $athlete_id,
+            ...$visible_params
         ), ARRAY_A);
 
         // Get records held

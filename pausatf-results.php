@@ -391,6 +391,8 @@ final class Plugin {
         }
 
         // Load core classes (always required)
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-age-grading.php';
+        AgeGrading::register_cli();
         require_once PAUSATF_RESULTS_DIR . 'includes/class-event-date.php';
         EventDate::register();
         require_once PAUSATF_RESULTS_DIR . 'includes/class-listed-sex.php';
@@ -427,6 +429,7 @@ final class Plugin {
 
         if (FeatureManager::is_enabled('ranking_system')) {
             require_once PAUSATF_RESULTS_DIR . 'includes/class-ranking-system.php';
+            add_action('pausatf_results_age_grading_imported', [RankingSystem::class, 'create_table']);
         }
 
         if (FeatureManager::is_enabled('athlete_dashboard')) {

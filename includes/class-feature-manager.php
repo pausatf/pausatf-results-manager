@@ -100,7 +100,7 @@ class FeatureManager {
 
         self::register_feature('ranking_system', [
             'name' => __('Ranking System', 'pausatf-results'),
-            'description' => __('Seasonal and all-time rankings with age-graded performance comparisons.', 'pausatf-results'),
+            'description' => __('Seasonal and all-time rankings.', 'pausatf-results'),
             'category' => 'analytics',
             'default' => true,
             'toggleable' => true,
@@ -108,6 +108,17 @@ class FeatureManager {
             'depends_on' => ['usatf_rules_engine'],
             'files' => ['includes/class-ranking-system.php'],
             'has_tables' => true,
+        ]);
+
+        self::register_feature('age_graded_rankings', [
+            'name' => __('Age-Graded Rankings', 'pausatf-results'),
+            'description' => __('Rank adult performances by age-graded percentage. Needs an imported age-grading factor table (docs/age-grading.md); without one nothing is graded.', 'pausatf-results'),
+            'category' => 'analytics',
+            'default' => false,
+            'toggleable' => true,
+            'icon' => 'dashicons-chart-line',
+            'depends_on' => ['ranking_system'],
+            'files' => ['includes/class-age-grading.php'],
         ]);
 
         // Athlete Experience

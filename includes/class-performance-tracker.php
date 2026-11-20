@@ -31,93 +31,16 @@ class PerformanceTracker {
     ];
 
     /**
-     * Age-grading factors (simplified - real implementation would use full tables)
-     * Based on WMA age-grading standards
-     */
-    private const AGE_STANDARDS = [
-        // Men's 5K open standard (seconds)
-        'M' => [
-            '5K' => 780,      // 13:00
-            '10K' => 1620,    // 27:00
-            'Half Marathon' => 3600,  // 1:00:00
-            'Marathon' => 7500,       // 2:05:00
-        ],
-        // Women's standards
-        'F' => [
-            '5K' => 900,      // 15:00
-            '10K' => 1860,    // 31:00
-            'Half Marathon' => 4140,  // 1:09:00
-            'Marathon' => 8400,       // 2:20:00
-        ],
-    ];
-
-    /**
-     * Age factors (percentage of open standard)
-     */
-    private const AGE_FACTORS = [
-        30 => 1.000, 35 => 0.990, 40 => 0.970, 45 => 0.940,
-        50 => 0.905, 55 => 0.865, 60 => 0.820, 65 => 0.770,
-        70 => 0.715, 75 => 0.655, 80 => 0.590, 85 => 0.520,
-        90 => 0.450,
-    ];
-
-    /**
-     * Calculate age-graded percentage
+     * Age-graded percentage from the imported factor table (AgeGrading). Null when no table
+     * is loaded, the athlete is under 18, or the table has no factor for the event and age.
      *
      * @param int    $time_seconds Actual time in seconds
-     * @param string $event Event name/distance
+     * @param string $event Event name as the table names it, e.g. "5K"
      * @param int    $age Athlete's age
      * @param string $sex M or F
-     * @return float|null Age-graded percentage (0-100+)
      */
     public function calculate_age_grade(int $time_seconds, string $event, int $age, string $sex): ?float {
-        $sex = strtoupper($sex);
-        if (!isset(self::AGE_STANDARDS[$sex][$event])) {
-            return null;
-        }
-
-        $open_standard = self::AGE_STANDARDS[$sex][$event];
-        $age_factor = $this->get_age_factor($age);
-
-        if (!$age_factor) {
-            return null;
-        }
-
-        // Age-graded time = actual time * age factor
-        $age_graded_time = $time_seconds * $age_factor;
-
-        // Age-graded percentage = (standard / age-graded time) * 100
-        $percentage = ($open_standard / $age_graded_time) * 100;
-
-        return round($percentage, 2);
-    }
-
-    /**
-     * Get age factor for a given age
-     */
-    private function get_age_factor(int $age): ?float {
-        if ($age < 30) {
-            return 1.0;
-        }
-
-        // Find the appropriate bracket
-        $ages = array_keys(self::AGE_FACTORS);
-        foreach ($ages as $i => $bracket_age) {
-            if ($age < $bracket_age) {
-                $prev_age = $ages[$i - 1] ?? 30;
-                $prev_factor = self::AGE_FACTORS[$prev_age];
-                $curr_factor = self::AGE_FACTORS[$bracket_age];
-
-                // Linear interpolation
-                $years_in_bracket = $bracket_age - $prev_age;
-                $years_past = $age - $prev_age;
-                $factor_diff = $prev_factor - $curr_factor;
-
-                return $prev_factor - ($factor_diff * ($years_past / $years_in_bracket));
-            }
-        }
-
-        return self::AGE_FACTORS[90];
+        return AgeGrading::grade($event, (float) $time_seconds, $age, strtoupper($sex))['percentage'] ?? null;
     }
 
     /**
