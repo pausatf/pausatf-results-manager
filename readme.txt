@@ -60,6 +60,7 @@ Schema changes run on the first wp-admin page load and delete nothing. Read docs
 
 = Unreleased =
 * Event dates read `_pausatf_event_start` first and fall back to `_pausatf_event_date`.
+* TLS certificates are verified on every outbound request, including the sync and batch directory listings and the Import screen's Analyze request, which the 2.2.0 entry did not cover.
 * Age divisions follow Rules 141 and 320 per discipline; U20 is a date test.
 * Sex is stored as listed in a new `sex_listed` column; unknown values are never scored as men.
 * Road record course limits (Rule 265.4) are available as a helper.

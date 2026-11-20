@@ -40,6 +40,10 @@ Changes on `main` since 2.4.0, in merge order.
 - Placeholder age factors and an age-graded percentage that ignored the factor. (#115)
 - XC club team standings that depended on an unspecified MySQL variable ordering. (#116)
 
+### Security
+
+- Verify TLS certificates on outbound requests. The scheduled sync's and batch import's directory listings and the Import screen's Analyze request had verification turned off; the 2.2.0 entry "TLS verification enabled on imports" covered only the result page fetches.
+
 ### CI and dependencies
 
 - Grouped `github/codeql-action` updates, with `init`, `autobuild` and `analyze` on one version. (#103)

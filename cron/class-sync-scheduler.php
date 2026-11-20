@@ -69,7 +69,6 @@ class SyncScheduler {
         // Check directory listing for current year
         $response = wp_remote_get(PAUSATF_LEGACY_SOURCE_URL . $current_year . '/', [
             'timeout' => 30,
-            'sslverify' => false,
         ]);
 
         if (is_wp_error($response)) {
@@ -121,7 +120,6 @@ class SyncScheduler {
 
         $response = wp_remote_get(PAUSATF_LEGACY_SOURCE_URL . $year . '/', [
             'timeout' => 30,
-            'sslverify' => false,
         ]);
 
         if (is_wp_error($response)) {
