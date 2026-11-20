@@ -78,7 +78,7 @@ Settings tabs:
 | RunSignUp, Athlinks, timing systems | Code | Each class | Placement time follows the event's stated basis. |
 | UltraSignUp | Code | `UltraSignupImport` | Stores sex as listed. |
 
-All of them write the legacy `_pausatf_event_date`. Which of them keep sex as listed is in [classification-and-records.md](classification-and-records.md#sex-as-listed). The scheduled sync's and batch import's directory listing requests, and the Import screen's Analyze request, are made with TLS certificate verification turned off. `ResultsImporter::import_from_url()`, which fetches the result pages, uses WordPress's default verification.
+All of them write the legacy `_pausatf_event_date`. Which of them keep sex as listed is in [classification-and-records.md](classification-and-records.md#sex-as-listed). Every outbound request (the sync's and batch import's directory listings, the Import screen's Analyze request, and the result pages that `ResultsImporter::import_from_url()` fetches) verifies TLS certificates against WordPress's CA bundle.
 
 ## Parsers
 

@@ -55,7 +55,7 @@ if (isset($_POST['pausatf_analyze_url']) && wp_verify_nonce($_POST['_wpnonce'] ?
     $url = esc_url_raw($_POST['analyze_url'] ?? '');
 
     if ($url) {
-        $response = wp_remote_get($url, ['timeout' => 15, 'sslverify' => false]);
+        $response = wp_remote_get($url, ['timeout' => 15]);
 
         if (!is_wp_error($response)) {
             $html = wp_remote_retrieve_body($response);
