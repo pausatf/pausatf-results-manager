@@ -2,7 +2,8 @@
 /**
  * USATF Age Divisions
  *
- * Defines age group divisions per USATF Rules 141 (age), 300.1 (youth) and 320.2 (masters)
+ * Defines age group divisions per the 2026 USATF Competition Rules: Rule 141 classifications
+ * (p. 48-49), Rule 300.1 youth divisions and Rule 320 masters divisions (p. 189).
  *
  * @package PAUSATF\Results\Rules
  */
@@ -33,22 +34,43 @@ class USATFAgeDivisions {
     ];
 
     /**
-     * U20 is a separate classification (Rule 141.1(b)), not a youth division.
+     * Age rules per discipline, in one place. Filter `pausatf_results_age_rules` (rules) can
+     * change them for a meet.
+     *
+     * - open_min: Rule 141.1(a), 14 on the day of competition for track & field and race
+     *   walking, 16 for cross country and long distance running.
+     * - masters_min: Rule 141.1(d), 35 for track & field and race walking, 40 for long
+     *   distance running, on the first day of the meet.
+     * - open_age_on / masters_age_on: the date age is taken on (141.1(a), 141.1(d), 320.4).
+     * - youth_age_on: Rule 300.1(b), the age reached by December 31 of the competition year.
      */
-    private const U20_DIVISION = ['code' => 'U20', 'name' => 'Junior', 'min_age' => 19, 'max_age' => 19, 'gender' => 'X'];
+    public const AGE_RULES = [
+        'track_field' => ['open_min' => 14, 'masters_min' => 35, 'open_age_on' => 'competition_day', 'masters_age_on' => 'first_day_of_meet', 'youth_age_on' => 'year_of_birth'],
+        'race_walk' => ['open_min' => 14, 'masters_min' => 35, 'open_age_on' => 'competition_day', 'masters_age_on' => 'first_day_of_meet', 'youth_age_on' => 'year_of_birth'],
+        'road' => ['open_min' => 16, 'masters_min' => 40, 'open_age_on' => 'competition_day', 'masters_age_on' => 'first_day_of_meet', 'youth_age_on' => 'year_of_birth'],
+        'cross_country' => ['open_min' => 16, 'masters_min' => 40, 'open_age_on' => 'competition_day', 'masters_age_on' => 'first_day_of_meet', 'youth_age_on' => 'year_of_birth'],
+        'mut' => ['open_min' => 16, 'masters_min' => 40, 'open_age_on' => 'competition_day', 'masters_age_on' => 'first_day_of_meet', 'youth_age_on' => 'year_of_birth'],
+    ];
+
+    /** Rule 141.3: minimum ages for events longer than the half marathon and the marathon. */
+    private const HALF_MARATHON_M = 21097.5;
+    private const MARATHON_M = 42195.0;
 
     /**
-     * Open division (20-34)
+     * Open division. Its lower bound depends on the discipline (Rule 141.1(a)); there is no maximum.
      */
     private const OPEN_DIVISIONS = [
-        'OPEN' => ['code' => 'OPEN', 'name' => 'Open', 'min_age' => 20, 'max_age' => 34, 'gender' => 'X'],
+        'OPEN' => ['code' => 'OPEN', 'name' => 'Open', 'min_age' => 14, 'max_age' => null, 'gender' => 'X'],
     ];
 
     /**
-     * Masters divisions (35+)
-     * Per USATF Rule 320.2 - 5-year age groups (track & field and race walk; LDR masters start at 40)
+     * Masters meet divisions, Rule 320.2 (p. 189): five-year groups from 25-29 to 95-99, then 100+.
+     * The masters classification itself starts at 35 or 40 (Rule 141.1(d)); M/W25 and M/W30 are
+     * used only where a meet follows the Rule 320 masters age groups.
      */
     private const MASTERS_DIVISIONS = [
+        'M25' => ['code' => 'M25', 'name' => 'Masters 25-29', 'min_age' => 25, 'max_age' => 29, 'gender' => 'M'],
+        'M30' => ['code' => 'M30', 'name' => 'Masters 30-34', 'min_age' => 30, 'max_age' => 34, 'gender' => 'M'],
         'M35' => ['code' => 'M35', 'name' => 'Masters 35-39', 'min_age' => 35, 'max_age' => 39, 'gender' => 'M'],
         'M40' => ['code' => 'M40', 'name' => 'Masters 40-44', 'min_age' => 40, 'max_age' => 44, 'gender' => 'M'],
         'M45' => ['code' => 'M45', 'name' => 'Masters 45-49', 'min_age' => 45, 'max_age' => 49, 'gender' => 'M'],
@@ -63,6 +85,8 @@ class USATFAgeDivisions {
         'M90' => ['code' => 'M90', 'name' => 'Masters 90-94', 'min_age' => 90, 'max_age' => 94, 'gender' => 'M'],
         'M95' => ['code' => 'M95', 'name' => 'Masters 95-99', 'min_age' => 95, 'max_age' => 99, 'gender' => 'M'],
         'M100' => ['code' => 'M100', 'name' => 'Masters 100+', 'min_age' => 100, 'max_age' => null, 'gender' => 'M'],
+        'W25' => ['code' => 'W25', 'name' => 'Masters 25-29', 'min_age' => 25, 'max_age' => 29, 'gender' => 'F'],
+        'W30' => ['code' => 'W30', 'name' => 'Masters 30-34', 'min_age' => 30, 'max_age' => 34, 'gender' => 'F'],
         'W35' => ['code' => 'W35', 'name' => 'Masters 35-39', 'min_age' => 35, 'max_age' => 39, 'gender' => 'F'],
         'W40' => ['code' => 'W40', 'name' => 'Masters 40-44', 'min_age' => 40, 'max_age' => 44, 'gender' => 'F'],
         'W45' => ['code' => 'W45', 'name' => 'Masters 45-49', 'min_age' => 45, 'max_age' => 49, 'gender' => 'F'],
@@ -80,27 +104,13 @@ class USATFAgeDivisions {
     ];
 
     /**
-     * Rule changes by year
-     */
-    private const RULE_CHANGES = [
-        2020 => [
-            'masters_start_age' => 35, // Track & field and race walk; LDR masters start at 40 (Rule 141.1(d))
-            'youth_age_determination' => 'year_of_birth', // Rule 300.1(b)
-        ],
-        2024 => [
-            'masters_start_age' => 35,
-            'youth_age_determination' => 'year_of_birth',
-        ],
-    ];
-
-    /**
      * Get all divisions for a given year
      */
     public static function get_divisions(int $year): array {
         $divisions = [];
 
-        // Youth divisions, then the separate U20 classification
-        foreach (self::YOUTH_DIVISIONS + ['U20' => self::U20_DIVISION] as $code => $division) {
+        // Youth divisions. U20 is an eligibility test on dates (is_u20()), not an age band.
+        foreach (self::YOUTH_DIVISIONS as $code => $division) {
             $divisions[$code . '_M'] = array_merge($division, ['gender' => 'M']);
             $divisions[$code . '_F'] = array_merge($division, ['gender' => 'F']);
         }
@@ -118,11 +128,43 @@ class USATFAgeDivisions {
     }
 
     /**
-     * Get division for a specific age and gender
+     * The category a listed sex is scored in: M, or F for a listed F or W. Anything else
+     * (unknown, non-binary, X, blank) has no USATF scoring category and returns null; it is
+     * never folded into the men's category.
      */
-    public static function get_division_for_age(int $age, string $gender, int $year): ?array {
-        $gender = strtoupper($gender);
+    public static function scoring_sex(?string $sex): ?string {
+        return match (strtoupper(trim((string) $sex))) {
+            'M' => 'M',
+            'F', 'W' => 'F',
+            default => null,
+        };
+    }
+
+    /**
+     * Age rules for a discipline; unknown disciplines use track & field.
+     *
+     * @return array{open_min: int, masters_min: int, open_age_on: string, masters_age_on: string, youth_age_on: string}
+     */
+    public static function age_rules(string $discipline): array {
+        $all = apply_filters('pausatf_results_age_rules', self::AGE_RULES);
+        $all = is_array($all) ? $all : self::AGE_RULES;
+        return ($all[$discipline] ?? null) ?: ($all['track_field'] ?? self::AGE_RULES['track_field']);
+    }
+
+    /**
+     * Division for an age (taken on the date age_rules() names) and listed sex.
+     *
+     * Youth bands cover 18 and under by year of birth. From the discipline's masters age the
+     * five-year masters group applies; between the two, Open. Returns null when the sex has
+     * no scoring category or the age is below every division.
+     */
+    public static function get_division_for_age(int $age, string $gender, int $year, string $discipline = 'track_field'): ?array {
+        $gender = self::scoring_sex($gender);
+        if ($gender === null || $age < 0) {
+            return null;
+        }
         $gender_code = $gender === 'F' ? 'W' : 'M';
+        $rules = self::age_rules($discipline);
 
         // Youth (age as reached by December 31, i.e. by year of birth)
         if ($age <= 18) {
@@ -133,26 +175,51 @@ class USATFAgeDivisions {
             }
         }
 
-        if ($age === 19) {
-            return array_merge(self::U20_DIVISION, ['gender' => $gender]);
+        if ($age < $rules['masters_min']) {
+            return array_merge(self::OPEN_DIVISIONS['OPEN'], ['gender' => $gender, 'min_age' => $rules['open_min']]);
         }
 
-        // Open
-        if ($age >= 20 && $age < 35) {
-            return array_merge(self::OPEN_DIVISIONS['OPEN'], ['gender' => $gender]);
-        }
+        return self::MASTERS_DIVISIONS[$gender_code . (string) min(100, intdiv($age, 5) * 5)] ?? null;
+    }
 
-        // Masters
-        $masters_code = $gender_code . (floor($age / 5) * 5);
-        if (isset(self::MASTERS_DIVISIONS[$masters_code])) {
-            return self::MASTERS_DIVISIONS[$masters_code];
+    /**
+     * Rule 320.2 division for a masters meet that uses the Rule 320 age groups, including
+     * M/W25 and M/W30. Age is taken on the first day of the meet (320.4).
+     */
+    public static function get_masters_meet_division(int $age, string $gender): ?array {
+        $gender = self::scoring_sex($gender);
+        if ($gender === null || $age < 25) {
+            return null;
         }
+        return self::MASTERS_DIVISIONS[($gender === 'F' ? 'W' : 'M') . (string) min(100, intdiv($age, 5) * 5)] ?? null;
+    }
 
-        // 100+
-        if ($age >= 100) {
-            return self::MASTERS_DIVISIONS[$gender_code . '100'];
+    /** Age in whole years on a date. */
+    public static function age_on(\DateTimeInterface $birth_date, \DateTimeInterface $on): int {
+        $diff = $birth_date->diff($on);
+        return $diff->invert === 1 ? -1 : $diff->y;
+    }
+
+    /**
+     * Rule 141.1(b): U20 means at least 14 on the day of competition and not turning 20
+     * during the competition year.
+     */
+    public static function is_u20(\DateTimeInterface $birth_date, \DateTimeInterface $competition_day): bool {
+        $turns_20 = (int) $birth_date->format('Y') + 20;
+        return self::age_on($birth_date, $competition_day) >= 14 && $turns_20 > (int) $competition_day->format('Y');
+    }
+
+    /**
+     * Rule 141.3: events longer than the half marathon or one hour need 16; longer than the
+     * marathon or two hours need 18. Null when the event sets no minimum beyond Rule 141.1.
+     */
+    public static function minimum_age_for_event(?float $distance_m, ?float $duration_s = null): ?int {
+        if (($distance_m !== null && $distance_m > self::MARATHON_M) || ($duration_s !== null && $duration_s > 7200)) {
+            return 18;
         }
-
+        if (($distance_m !== null && $distance_m > self::HALF_MARATHON_M) || ($duration_s !== null && $duration_s > 3600)) {
+            return 16;
+        }
         return null;
     }
 
@@ -165,22 +232,22 @@ class USATFAgeDivisions {
     }
 
     /**
-     * Get all divisions an athlete is eligible for
+     * Divisions an athlete can be scored in: the age division plus Open for masters and for
+     * youth old enough for Open in the discipline (Rule 141.1(a)).
      */
-    public static function get_eligible_divisions(int $age, string $gender, int $year): array {
+    public static function get_eligible_divisions(int $age, string $gender, int $year, string $discipline = 'track_field'): array {
         $eligible = [];
-        $gender = strtoupper($gender);
-
-        // Primary age division
-        $primary = self::get_division_for_age($age, $gender, $year);
-        if ($primary) {
-            $eligible[] = $primary;
+        $primary = self::get_division_for_age($age, $gender, $year, $discipline);
+        if ($primary === null) {
+            return [];
         }
+        $eligible[] = $primary;
 
-        // Masters can compete in open (but scored separately)
-        if ($age >= 35) {
+        $rules = self::age_rules($discipline);
+        if ($primary['code'] !== 'OPEN' && $age >= $rules['open_min']) {
             $eligible[] = array_merge(self::OPEN_DIVISIONS['OPEN'], [
-                'gender' => $gender,
+                'gender' => $primary['gender'],
+                'min_age' => $rules['open_min'],
                 'note' => 'May compete in open division',
             ]);
         }
@@ -204,15 +271,14 @@ class USATFAgeDivisions {
     /**
      * How age is determined, by context:
      * - open / U20: age on the day of competition (Rule 141.1(a)-(b))
-     * - masters (track & field, race walk): age on the first day of the meet (141.1(d)(i))
-     * - masters_ldr: age on the day the race starts (341.4)
+     * - masters (track & field, race walk) and masters_ldr: age on the first day of the meet
+     *   (Rule 141.1(d), 320.4)
      * - youth: year of birth (300.1(b))
      */
     public static function get_age_determination_rule(int $year, string $context = 'open'): string {
         return match ($context) {
             'youth' => 'year_of_birth',
-            'masters' => 'first_day_of_meet',
-            'masters_ldr' => 'race_start_day',
+            'masters', 'masters_ldr' => 'first_day_of_meet',
             default => 'competition_day',
         };
     }
@@ -221,23 +287,31 @@ class USATFAgeDivisions {
      * Calculate single-year age groups for road running
      * Per USATF Road Running Technical Council
      */
-    public static function get_single_year_division(int $age, string $gender): array {
-        $gender_code = strtoupper($gender) === 'F' ? 'W' : 'M';
+    public static function get_single_year_division(int $age, string $gender): ?array {
+        $gender = self::scoring_sex($gender);
+        if ($gender === null) {
+            return null;
+        }
+        $gender_code = $gender === 'F' ? 'W' : 'M';
 
         return [
             'code' => $gender_code . $age,
             'name' => "Age {$age}",
             'min_age' => $age,
             'max_age' => $age,
-            'gender' => strtoupper($gender),
+            'gender' => $gender,
         ];
     }
 
     /**
      * Get 10-year age groups (common for road races)
      */
-    public static function get_10year_division(int $age, string $gender): array {
-        $gender_code = strtoupper($gender) === 'F' ? 'W' : 'M';
+    public static function get_10year_division(int $age, string $gender): ?array {
+        $gender = self::scoring_sex($gender);
+        if ($gender === null) {
+            return null;
+        }
+        $gender_code = $gender === 'F' ? 'W' : 'M';
         $decade = floor($age / 10) * 10;
         $max_age = $decade + 9;
 
@@ -258,7 +332,7 @@ class USATFAgeDivisions {
             'name' => $name_map[$decade] ?? "{$decade}+",
             'min_age' => $decade,
             'max_age' => $decade === 90 ? null : $max_age,
-            'gender' => strtoupper($gender),
+            'gender' => $gender,
         ];
     }
 
@@ -270,10 +344,12 @@ class USATFAgeDivisions {
 
         $division = strtoupper(trim($division));
 
-        // Extract gender
-        $gender = 'M';
+        // Extract gender; null when the division names none
+        $gender = null;
         if (preg_match('/^(W|F)/i', $division)) {
             $gender = 'F';
+        } elseif (preg_match('/^M(?!ASTERS)/i', $division)) {
+            $gender = 'M';
         }
 
         // Extract ages

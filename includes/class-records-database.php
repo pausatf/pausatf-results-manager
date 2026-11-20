@@ -238,7 +238,7 @@ class RecordsDatabase {
         ?float $wind = null
     ): array {
         // Get applicable division
-        $division = $this->rules->get_division_for_age($age, $gender);
+        $division = $this->rules->get_division_for_age($age, $gender, match ($venue_type) { 'road' => 'road', 'xc' => 'cross_country', 'trail' => 'mut', default => 'track_field' });
         if (!$division) {
             return ['is_record' => false, 'reason' => 'Invalid age/gender'];
         }

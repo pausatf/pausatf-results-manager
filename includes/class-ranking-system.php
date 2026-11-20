@@ -307,7 +307,9 @@ class RankingSystem {
         foreach ($best_results as $result) {
             $rank++;
 
-            $division = $this->rules->get_division_for_age($result['athlete_age'], $gender);
+            $division = isset($result['athlete_age'])
+                ? $this->rules->get_division_for_age((int) $result['athlete_age'], $gender, 'road')
+                : null;
 
             $wpdb->insert($this->rankings_table, [
                 'ranking_type' => $ranking_type,
