@@ -2,6 +2,12 @@
 
 This file follows the [Keep a Changelog](https://keepachangelog.com/) layout. Pull request numbers refer to the `pausatf/pausatf-results-manager` repository. Upgrade steps for 2.5.0 are in [docs/upgrading.md](docs/upgrading.md). History before 2.4.0 is in the git log and the version tags.
 
+## Unreleased
+
+### Fixed
+
+- **Clear All Caches** deleted every `pausatf_` transient, including PAUSATF Site's. It now deletes only RM's (`pausatf_usatf_*` and `pausatf_cert_gen_*`), the same list Delete All Data uses.
+
 ## 2.5.0 - 2026-11-20
 
 Changes since 2.4.0, in merge order.

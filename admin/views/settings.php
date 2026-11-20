@@ -583,7 +583,7 @@ $tabs = [
                         </button>
                         <span class="spinner" style="float: none;"></span>
                         <p class="description">
-                            <?php esc_html_e('Clears all cached data including rankings, records, and transients.', 'pausatf-results'); ?>
+                            <?php esc_html_e('Clears the cached USATF membership lookups and certificate rate limits. Transients from PAUSATF Site are left alone.', 'pausatf-results'); ?>
                         </p>
                     </td>
                 </tr>
