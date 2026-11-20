@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace PAUSATF\Results\Storage;
 
 use PAUSATF\Results\EventDate;
+use PAUSATF\Results\ListedSex;
 use PAUSATF\Results\Parsers\ParsedResults;
 
 if (!defined('ABSPATH')) {
@@ -160,7 +161,8 @@ class ResultsRepository {
             'event_id' => $event_id,
             'athlete_name' => $this->sanitize_athlete_name($result['athlete_name'] ?? ''),
             'athlete_age' => $this->validate_age($result['athlete_age'] ?? null),
-            'sex' => $this->validate_sex($result['sex'] ?? null),
+            // Scoring category only (M/F or null); the listed value goes to sex_listed below.
+            'sex' => ListedSex::category(isset($result['sex']) ? (string) $result['sex'] : null),
             'place' => $this->validate_place($result['place'] ?? null),
             'division' => sanitize_text_field($result['division'] ?? ''),
             'division_place' => $this->validate_place($result['division_place'] ?? null),
@@ -174,12 +176,6 @@ class ResultsRepository {
             'raw_data' => wp_json_encode($result),
             'created_at' => current_time('mysql'),
         ];
-
-        // Try to link to existing athlete
-        $athlete_id = $this->find_athlete($result);
-        if ($athlete_id) {
-            $data['athlete_id'] = $athlete_id;
-        }
 
         // Define format types for wpdb
         $formats = [
@@ -201,7 +197,16 @@ class ResultsRepository {
             '%s', // created_at
         ];
 
-        if (isset($data['athlete_id'])) {
+        // Keep sex exactly as listed once the column exists (Plugin::maybe_upgrade()).
+        if (ListedSex::schema_ready()) {
+            $data['sex_listed'] = ListedSex::listed(isset($result['sex']) ? (string) $result['sex'] : null);
+            $formats[] = '%s';
+        }
+
+        // Try to link to existing athlete
+        $athlete_id = $this->find_athlete($result);
+        if ($athlete_id) {
+            $data['athlete_id'] = $athlete_id;
             $formats[] = '%d';
         }
 
@@ -549,14 +554,6 @@ class ResultsRepository {
             return null;
         }
         return $age;
-    }
-
-    private function validate_sex(?string $sex): ?string {
-        if ($sex === null) {
-            return null;
-        }
-        $sex = strtoupper(substr(trim($sex), 0, 1));
-        return in_array($sex, ['M', 'F'], true) ? $sex : null;
     }
 
     private function validate_place(?int $place): ?int {

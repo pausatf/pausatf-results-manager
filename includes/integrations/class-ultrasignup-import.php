@@ -9,6 +9,8 @@
 
 namespace PAUSATF\Results\Integrations;
 
+use PAUSATF\Results\ListedSex;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -219,7 +221,7 @@ class UltraSignupImport {
             $age = (int) $data['age'];
         }
         if (!empty($data['gender']) || !empty($data['sex'])) {
-            $gender = strtoupper(substr($data['gender'] ?? $data['sex'], 0, 1));
+            $gender = trim((string) ($data['gender'] ?? $data['sex']));
         }
 
         return [
@@ -324,6 +326,7 @@ class UltraSignupImport {
                 'division_place' => $result['division_place'],
                 'raw_data' => json_encode($result),
             ];
+            $row += ListedSex::columns($result['gender'] ?? null);
 
             if ($wpdb->insert($table, $row)) {
                 $imported++;
