@@ -71,6 +71,7 @@ Schema changes run on the first wp-admin page load and delete nothing. Read docs
 * Grand Prix standings recompute after every import, and the result, athlete-claim and ranking webhooks are sent.
 * Cross country team scoring follows the PA Cross Country Rules (3/1/26).
 * Athlete identity resolves through PAUSATF Site's Archive, with a fallback.
+* Delete All Data empties exactly the tables RM creates and never deletes events owned by PAUSATF Site.
 * Grand Prix standings for the PA 2026 road, cross country and MUT rules, with a `ruleset` column on series.
 * The bundled results archive (admin menu, `pausatf/v1/archive/*` REST routes, `pausatf_archive_release` shortcode, `pausatf-results archive` CLI) is not loaded while PAUSATF Site's Archive module is active. Use the `pausatf_results_defer_archive_to_site` filter to force either behavior.
 
