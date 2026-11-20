@@ -300,12 +300,7 @@ class AdminSettings {
             return;
         }
 
-        global $wpdb;
-
-        // Delete all plugin transients
-        $wpdb->query(
-            "DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_pausatf_%' OR option_name LIKE '_transient_timeout_pausatf_%'"
-        );
+        self::delete_transients();
 
         // Clear object cache if available
         if (function_exists('wp_cache_flush_group')) {
@@ -390,6 +385,15 @@ class AdminSettings {
             }
         }
 
+        self::delete_transients();
+
+        return ['tables' => $tables, 'post_types' => $post_types];
+    }
+
+    /** Delete the value and timeout rows of RM's transients only. */
+    private static function delete_transients(): void {
+        global $wpdb;
+
         foreach (self::TRANSIENT_PREFIXES as $prefix) {
             $wpdb->query($wpdb->prepare(
                 "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
@@ -397,8 +401,6 @@ class AdminSettings {
                 $wpdb->esc_like('_transient_timeout_' . $prefix) . '%'
             ));
         }
-
-        return ['tables' => $tables, 'post_types' => $post_types];
     }
 }
 

@@ -16,6 +16,21 @@ namespace {
             return $GLOBALS['pausatf_test_posts_by_type'][$args['post_type'] ?? ''] ?? [];
         }
     }
+    if (!function_exists('wp_verify_nonce')) {
+        function wp_verify_nonce($nonce, $action = -1) {
+            return 1;
+        }
+    }
+    if (!function_exists('current_user_can')) {
+        function current_user_can($capability) {
+            return true;
+        }
+    }
+    if (!function_exists('wp_send_json_success')) {
+        function wp_send_json_success($data = null) {
+            $GLOBALS['pausatf_test_json_success'] = $data;
+        }
+    }
     if (!function_exists('wp_delete_post')) {
         function wp_delete_post($post_id = 0, $force_delete = false) {
             $GLOBALS['pausatf_test_deleted_posts'][] = $post_id;
@@ -63,7 +78,8 @@ namespace PAUSATF\Results\Tests {
         protected function tearDown(): void {
             $GLOBALS['wpdb'] = $this->previous_wpdb;
             unset($GLOBALS['pausatf_test_options'], $GLOBALS['pausatf_test_posts_by_type'],
-                $GLOBALS['pausatf_test_post_queries'], $GLOBALS['pausatf_test_deleted_posts']);
+                $GLOBALS['pausatf_test_post_queries'], $GLOBALS['pausatf_test_deleted_posts'],
+                $GLOBALS['pausatf_test_json_success'], $_POST['_wpnonce']);
         }
 
         /** @return list<string> Tables truncated, without the prefix. */
@@ -139,6 +155,51 @@ namespace PAUSATF\Results\Tests {
             foreach ($deletes as $sql) {
                 self::assertStringNotContainsString("'_transient_pausatf_%'", $sql);
             }
+        }
+
+        public function test_clear_cache_removes_rm_transients_and_keeps_other_plugins(): void {
+            $GLOBALS['wpdb'] = new class {
+                public string $prefix = 'wp_';
+                public string $options = 'wp_options';
+                /** @var list<string> */
+                public array $rows = [
+                    '_transient_pausatf_usatf_abc',
+                    '_transient_timeout_pausatf_usatf_abc',
+                    '_transient_pausatf_cert_gen_def',
+                    '_transient_timeout_pausatf_cert_gen_def',
+                    '_transient_pausatf_site_archive_stats',
+                    '_transient_timeout_pausatf_site_archive_stats',
+                    '_transient_other_plugin_cache',
+                ];
+                public function esc_like(string $text): string {
+                    return addcslashes($text, '_%\\');
+                }
+                public function prepare(string $sql, ...$args): string {
+                    return vsprintf(str_replace('%s', "'%s'", $sql), $args);
+                }
+                /** Applies the LIKE patterns of a DELETE to $rows. */
+                public function query(string $sql) {
+                    preg_match_all("/option_name LIKE '([^']+)'/", $sql, $m);
+                    foreach ($m[1] as $like) {
+                        $regex = '/^' . str_replace('%', '.*', preg_quote(stripslashes($like), '/')) . '$/';
+                        $this->rows = array_values(array_filter(
+                            $this->rows,
+                            static fn(string $name): bool => preg_match($regex, $name) !== 1
+                        ));
+                    }
+                    return 0;
+                }
+            };
+            $_POST['_wpnonce'] = 'ok';
+
+            AdminSettings::ajax_clear_cache();
+
+            self::assertSame([
+                '_transient_pausatf_site_archive_stats',
+                '_transient_timeout_pausatf_site_archive_stats',
+                '_transient_other_plugin_cache',
+            ], $GLOBALS['wpdb']->rows);
+            self::assertArrayHasKey('message', $GLOBALS['pausatf_test_json_success']);
         }
     }
 }

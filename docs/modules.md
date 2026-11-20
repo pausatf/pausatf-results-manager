@@ -62,7 +62,7 @@ Settings tabs:
   - Scan All Results for Potential Records, which queues pending records for review.
   - Regenerate All Rankings rebuilds every event, sex and division for the current year.
   - Repair Database Tables re-runs the table installers for enabled features.
-  - Clear All Caches deletes the plugin's transients.
+  - Clear All Caches deletes RM's own transients (`pausatf_usatf_*` and `pausatf_cert_gen_*`) and flushes the `pausatf_results` object cache group. Transients with other `pausatf_` prefixes belong to PAUSATF Site and are kept.
   - Delete All Data, described below.
 
 **Delete All Data** empties every table RM creates that exists: `pausatf_results`, `pausatf_imports`, `pausatf_records`, `pausatf_pending_records`, `pausatf_rankings`, `pausatf_grand_prix_series`, `pausatf_grand_prix_events`, `pausatf_grand_prix_standings`, `pausatf_webhooks` and `pausatf_webhook_logs`. It permanently deletes every `pausatf_athlete` and `pausatf_claim` post, in any status. It deletes `pausatf_event` posts only while RM owns that post type (`pausatf_results_event_type_owner` is `pausatf-results`); when PAUSATF Site owns it, or no owner is recorded yet, no event is touched, and RM's meta on those events (such as `_pausatf_result_count`) is left as it was. It deletes RM's own transients (`pausatf_usatf_*` and `pausatf_cert_gen_*`). It keeps the bundled archive tables, whose `pausatf_archive_` prefix PAUSATF Site's Archive also uses, the retired sanctions tables, settings, API keys, the schema options and the imported age-grading table. It needs `manage_options`, the page nonce and the browser confirmation, and it cannot be undone.

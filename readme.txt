@@ -58,6 +58,9 @@ Schema changes run on the first wp-admin page load and delete nothing. Read docs
 
 == Changelog ==
 
+= Unreleased =
+* Clear All Caches deletes only RM's own transients; PAUSATF Site's `pausatf_` transients are kept.
+
 = 2.5.0 =
 * Event dates read `_pausatf_event_start` first and fall back to `_pausatf_event_date`.
 * TLS certificates are verified on every outbound request, including the sync and batch directory listings and the Import screen's Analyze request, which the 2.2.0 entry did not cover.
