@@ -3,14 +3,14 @@
  * Plugin Name: PAUSATF Results Manager
  * Plugin URI: https://github.com/pausatf/pausatf-results-manager
  * Description: Import, manage, and display PAUSATF legacy competition results with full athlete tracking.
- * Version: 2.4.0
+ * Version: 2.5.0
  * Author: PAUSATF
  * Author URI: https://www.pausatf.org
  * License: GPL v2 or later
  * Text Domain: pausatf-results
  * Domain Path: /languages
  * Requires at least: 6.0
- * Tested up to: 6.7
+ * Tested up to: 7.1
  * Requires PHP: 8.4
  */
 
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('PAUSATF_RESULTS_VERSION', '2.4.0');
+define('PAUSATF_RESULTS_VERSION', '2.5.0');
 define('PAUSATF_RESULTS_FILE', __FILE__);
 define('PAUSATF_RESULTS_DIR', plugin_dir_path(__FILE__));
 define('PAUSATF_RESULTS_URL', plugin_dir_url(__FILE__));
