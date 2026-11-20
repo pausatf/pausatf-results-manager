@@ -278,7 +278,7 @@ class ParserTable implements ParserInterface {
             } elseif ($field === 'division_place') {
                 $result['division_place'] = (int) preg_replace('/\D/', '', $value);
             } elseif ($field === 'sex') {
-                $result['sex'] = strtoupper(substr(trim($value), 0, 1));
+                $result['sex'] = trim($value); // as listed; ListedSex maps it to a category
             }
         }
 

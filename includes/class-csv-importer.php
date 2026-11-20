@@ -206,7 +206,7 @@ class CSVImporter {
                     break;
 
                 case 'sex':
-                    $result['sex'] = strtoupper(substr($value, 0, 1));
+                    $result['sex'] = trim($value); // as listed; ListedSex maps it to a category
                     break;
 
                 default:

@@ -376,7 +376,6 @@ class HyTekImporter {
         }
 
         $age = $athlete['age'] ?? 0;
-        $gender = strtoupper($athlete['gender'] ?? 'M');
 
         if ($age < 40) {
             return 'Open';

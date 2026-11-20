@@ -127,7 +127,14 @@ class USATFEventStandards {
         int $year
     ): array {
         $standards = self::get_standards($year);
-        $gender_key = strtoupper($gender) === 'F' ? 'women' : 'men';
+        $gender_key = match (strtoupper(trim($gender))) {
+            'M' => 'men',
+            'F', 'W' => 'women',
+            default => null,
+        };
+        if ($gender_key === null) {
+            return ['meets_standard' => null, 'reason' => 'No standard for this sex category'];
+        }
 
         if (!isset($standards[$gender_key][$event])) {
             return ['meets_standard' => null, 'reason' => 'No standard for event'];

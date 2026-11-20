@@ -82,7 +82,9 @@ final class Plugin {
         require_once PAUSATF_RESULTS_DIR . 'includes/class-feature-manager.php';
 
         // Create custom database tables (core - always needed)
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-listed-sex.php';
         $this->create_tables();
+        update_option(ListedSex::SCHEMA_OPTION, ListedSex::SCHEMA_VERSION);
 
         // Create additional tables from components (conditionally based on features)
         if (FeatureManager::is_enabled('records_database')) {
@@ -297,6 +299,7 @@ final class Plugin {
             athlete_id bigint(20) unsigned DEFAULT NULL,
             athlete_name varchar(255) NOT NULL,
             sex varchar(1) DEFAULT NULL,
+            sex_listed varchar(20) DEFAULT NULL,
             athlete_age smallint unsigned DEFAULT NULL,
             place smallint unsigned DEFAULT NULL,
             division varchar(50) DEFAULT NULL,
@@ -345,9 +348,11 @@ final class Plugin {
     /** Run non-destructive schema upgrades for sites upgraded without reactivation. */
     public function maybe_upgrade(): void {
         $installed = get_option('pausatf_results_version', '0');
-        if (version_compare($installed, PAUSATF_RESULTS_VERSION, '<')) {
+        // The schema option lets a column be added without a release version bump.
+        if (version_compare($installed, PAUSATF_RESULTS_VERSION, '<') || !ListedSex::schema_ready()) {
             $this->create_tables();
             update_option('pausatf_results_version', PAUSATF_RESULTS_VERSION);
+            update_option(ListedSex::SCHEMA_OPTION, ListedSex::SCHEMA_VERSION);
         }
     }
 
@@ -388,6 +393,7 @@ final class Plugin {
         // Load core classes (always required)
         require_once PAUSATF_RESULTS_DIR . 'includes/class-event-date.php';
         EventDate::register();
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-listed-sex.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-results-importer.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/storage/class-results-repository.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-canonical-event-service.php';
