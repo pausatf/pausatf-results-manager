@@ -2,9 +2,9 @@
 Contributors: thomasvincent
 Tags: results, athletics, track-and-field, race-results, importer
 Requires at least: 6.0
-Tested up to: 6.7
+Tested up to: 7.1
 Requires PHP: 8.4
-Stable tag: 2.4.0
+Stable tag: 2.5.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,12 +53,12 @@ No. They are computed from the PA rule texts and marked unverified until the sit
 
 == Upgrade Notice ==
 
-= Unreleased =
+= 2.5.0 =
 Schema changes run on the first wp-admin page load and delete nothing. Read docs/upgrading.md before upgrading a production site.
 
 == Changelog ==
 
-= Unreleased =
+= 2.5.0 =
 * Event dates read `_pausatf_event_start` first and fall back to `_pausatf_event_date`.
 * TLS certificates are verified on every outbound request, including the sync and batch directory listings and the Import screen's Analyze request, which the 2.2.0 entry did not cover.
 * Age divisions follow Rules 141 and 320 per discipline; U20 is a date test.

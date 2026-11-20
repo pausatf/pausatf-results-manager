@@ -1,6 +1,6 @@
 # Reference
 
-Every interface Results Manager (RM) exposes, as of the main branch at version 2.4.0 plus the changes listed under Unreleased in [CHANGELOG.md](../CHANGELOG.md). Feature gates refer to the toggles in [modules.md](modules.md). A route or hook marked "feature" exists only while that feature is on.
+Every interface Results Manager (RM) exposes, as of version 2.5.0 (see [CHANGELOG.md](../CHANGELOG.md)). Feature gates refer to the toggles in [modules.md](modules.md). A route or hook marked "feature" exists only while that feature is on.
 
 ## Content types
 
