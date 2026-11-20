@@ -64,6 +64,7 @@ Schema changes run on the first wp-admin page load and delete nothing. Read docs
 * Sex is stored as listed in a new `sex_listed` column; unknown values are never scored as men.
 * Road record course limits (Rule 265.4) are available as a helper.
 * Placement time follows the event's stated gun, net or combination basis, gun by default. Official times round up to the next whole second.
+* Two unused classes, `ResultsImporterV2` and the abstract `RestController`, are removed. Nothing loaded them.
 * The Sanctions Manager is retired. Its data is kept.
 * Age grading uses one implementation and a factor table imported with WP-CLI. Rankings stay off without a table.
 * Cross country team scoring follows the PA Cross Country Rules (3/1/26).
