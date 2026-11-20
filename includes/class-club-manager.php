@@ -166,39 +166,72 @@ class ClubManager {
     }
 
     /**
-     * Get team standings for an event
+     * Cross country team standings for one race, per division, by the PA XC Grand Prix
+     * rules (XCTeamScoring). Runners are eligible through GPEligibility's filters; rows say
+     * whether every scorer was verified.
      *
      * @param int $event_id Event post ID
-     * @return array Team standings
+     * @return list<array<string, mixed>> One row per team per division, best first.
      */
     public function get_event_team_standings(int $event_id): array {
         global $wpdb;
         $table = $wpdb->prefix . 'pausatf_results';
 
-        // Standard XC scoring: sum of top 5 places, low score wins
-        return $wpdb->get_results($wpdb->prepare(
-            "SELECT
-                club,
-                COUNT(*) as finishers,
-                SUM(place) as total_score,
-                MIN(place) as best_finish,
-                GROUP_CONCAT(athlete_name ORDER BY place SEPARATOR ', ') as top_runners
-             FROM (
-                SELECT r.club, r.place, r.athlete_name,
-                       @rn := IF(@club = r.club, @rn + 1, 1) as row_num,
-                       @club := r.club
-                FROM {$table} r, (SELECT @rn := 0, @club := '') vars
-                WHERE r.event_id = %d
-                AND r.club IS NOT NULL
-                AND r.club != ''
-                ORDER BY r.club, r.place
-             ) ranked
-             WHERE row_num <= 5
-             GROUP BY club
-             HAVING finishers >= 5
-             ORDER BY total_score ASC",
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, athlete_id, athlete_name, place, sex, athlete_age, division, club
+             FROM {$table}
+             WHERE event_id = %d AND place IS NOT NULL AND place > 0
+             ORDER BY place ASC",
             $event_id
         ), ARRAY_A);
+
+        $groups = [];
+        $by_id = [];
+        foreach ($rows ?: [] as $row) {
+            $sex = $row['sex'] ?? null;
+            $division = XCTeamScoring::team_division($row);
+            if (($sex !== 'M' && $sex !== 'F') || $division === null) {
+                continue;
+            }
+            $check = GPEligibility::check($row);
+            $by_id[(string) $row['id']] = $row + ['verified' => $check['verified']];
+            $groups[$sex][$division][] = [
+                'id' => (int) $row['id'],
+                'place' => (int) $row['place'],
+                'team' => $row['club'] ?? null,
+                'eligible' => $check['eligible'],
+            ];
+        }
+
+        $standings = [];
+        foreach ($groups as $sex => $divisions) {
+            foreach ($divisions as $division => $finishers) {
+                $rules = XCTeamScoring::division_rules($sex, (string) $division);
+                if ($rules === null) {
+                    continue;
+                }
+                foreach (XCTeamScoring::score($finishers, $rules) as $team) {
+                    $scorers = array_map(static fn($id) => $by_id[(string) $id], $team['scorers']);
+                    $standings[] = [
+                        'club' => $team['team'],
+                        'sex' => $sex,
+                        'division' => (string) $division,
+                        'team_place' => $team['place'],
+                        'total_score' => $team['score'],
+                        'team_points' => $team['points'],
+                        'complete' => $team['complete'],
+                        'finishers' => count($team['scorers']),
+                        'best_finish' => (int) ($scorers[0]['place'] ?? 0),
+                        'top_runners' => implode(', ', array_column($scorers, 'athlete_name')),
+                        'scorer_ids' => $team['scorers'],
+                        'displacer_ids' => $team['displacers'],
+                        'verified' => !in_array(false, array_column($scorers, 'verified'), true),
+                    ];
+                }
+            }
+        }
+
+        return $standings;
     }
 
     /**
