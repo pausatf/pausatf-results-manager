@@ -87,8 +87,6 @@ Namespace `pausatf/v1`. The routes marked public use `permission_callback => __r
 
 The archive routes exist only while the bundled archive is loaded, that is, while PAUSATF Site's Archive is not active.
 
-The files `includes/api/class-rest-controller.php` and `includes/class-results-importer-v2.php` define classes that nothing loads. They are not part of the current surface.
-
 ### Other endpoints
 
 | Endpoint | Feature | Notes |
@@ -186,5 +184,3 @@ Settings tools, which require `manage_options` and the `pausatf_ajax` nonce: `pa
 | `pausatf_result_imported` (event ID, count) | Grand Prix | Recomputes every series containing the event. RM fires the plural `pausatf_results_imported` instead; this one is for site code that wants a recompute. |
 
 Webhooks do send `event.created` and `event.updated` (on `save_post_pausatf_event`) and `record.created` (on `pausatf_new_record`). The events `result.updated` and `record.approved` can be selected in the admin screen, but nothing triggers them. Webhook payloads are signed with HMAC-SHA256 in the `X-PAUSATF-Signature` header (`sha256=<hex>`), with `X-PAUSATF-Event` and `X-PAUSATF-Delivery` headers.
-
-`ResultsImporterV2` declares `pausatf_pre_parse_html`, `pausatf_validate_parsed_results`, `pausatf_should_skip_import_file`, `pausatf_batch_import_file_processed` and `pausatf_import_completed`. Nothing loads that class, so these hooks do not run.

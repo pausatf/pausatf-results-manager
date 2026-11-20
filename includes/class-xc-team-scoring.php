@@ -15,7 +15,8 @@
  * Section 2 gives the per-race team points (15 down to 1.5 for 10th).
  *
  * Membership and PA-club status are inputs: RM does not hold rosters, so callers pass
- * them, usually through EligibilityFilters.
+ * them, usually from GPEligibility::check(), which reads the pausatf_results_gp_member_status
+ * and pausatf_results_gp_is_pa_club filters.
  *
  * @package PAUSATF\Results
  */

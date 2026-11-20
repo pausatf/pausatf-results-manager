@@ -66,6 +66,7 @@ Schema changes run on the first wp-admin page load and delete nothing. Read docs
 * Every importer now stores sex as listed, including the HTML, CSV, Hy-Tek, RunSignUp, Athlinks and timing system importers.
 * Road record course limits (Rule 265.4) are available as a helper.
 * Placement time follows the event's stated gun, net or combination basis, gun by default. Official times round up to the next whole second.
+* Two unused classes, `ResultsImporterV2` and the abstract `RestController`, are removed. Nothing loaded them.
 * The Sanctions Manager is retired. Its data is kept.
 * Age grading uses one implementation and a factor table imported with WP-CLI. Rankings stay off without a table.
 * Grand Prix standings recompute after every import, and the result, athlete-claim and ranking webhooks are sent.

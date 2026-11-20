@@ -34,6 +34,7 @@ Changes on `main` since 2.4.0, in merge order.
 
 ### Removed
 
+- `ResultsImporterV2` with its `ImportResult` and `BatchImportResult` classes (`includes/class-results-importer-v2.php`), and the abstract `RestController` (`includes/api/class-rest-controller.php`), which nothing loaded or referenced. The hooks only `ResultsImporterV2` declared (`pausatf_pre_parse_html`, `pausatf_validate_parsed_results`, `pausatf_should_skip_import_file`, `pausatf_batch_import_file_processed`, `pausatf_import_completed`) never ran and are gone with it.
 - The Sanctions Manager: its admin page, AJAX actions, REST routes, forms, fee table, notification emails, reminder cron job and Features entry. Its tables, option and role capabilities are kept. The three sanction shortcodes print a notice linking to PA's sanctions page. See [docs/sanctions-retirement.md](docs/sanctions-retirement.md). (#114)
 
 ### Fixed
