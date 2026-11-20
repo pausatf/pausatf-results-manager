@@ -37,4 +37,16 @@ final class GPEligibility {
         }
         return ['eligible' => true, 'verified' => $member === true && $club === true];
     }
+
+    /**
+     * Individual eligibility: membership only, since unattached members score as individuals
+     * (LDR 4.1).
+     *
+     * @param array<string, mixed> $result
+     * @return array{eligible: bool, verified: bool}
+     */
+    public static function member(array $result): array {
+        $member = apply_filters('pausatf_results_gp_member_status', null, $result);
+        return ['eligible' => $member !== false, 'verified' => $member !== null];
+    }
 }

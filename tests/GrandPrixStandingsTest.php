@@ -118,6 +118,43 @@ class GrandPrixStandingsTest extends TestCase {
         self::assertSame(200.0, (float) reset($rows)['total_points']);
     }
 
+    public function test_series_with_a_2026_ruleset_stores_division_age_plus_and_team_rows(): void {
+        $this->db->series += ['ruleset' => 'pa_road_2026', 'season_year' => 2026];
+        $this->db->results = [];
+        foreach (range(1, 5) as $i) {
+            $this->db->results[] = $this->row("R{$i}", 'M', 1, $i, ['athlete_age' => 40 + $i, 'club' => 'Club R', 'time_seconds' => 1800 + $i]);
+        }
+        $grand_prix = new \PAUSATF\Results\GrandPrix();
+        $grand_prix->calculate_standings(7);
+
+        $by = [];
+        foreach ($this->db->inserted as $row) {
+            $by["{$row['entry_type']}|{$row['standing_type']}|{$row['division']}|{$row['athlete_name']}"] = $row;
+        }
+        self::assertSame(150.0, (float) $by['individual|division|40|R1']['total_points']);
+        self::assertSame(135.0, (float) $by['individual|age_plus|OPEN|R2']['total_points']);
+        self::assertSame('name:r1', $by['individual|division|40|R1']['athlete_key']);
+        self::assertSame(0, $by['individual|division|40|R1']['verified']);
+        self::assertSame(10.0, (float) $by['team|team|40|Club R']['total_points']);
+    }
+
+    public function test_road_series_part_rejects_events_of_the_wrong_length(): void {
+        $grand_prix = new \PAUSATF\Results\GrandPrix();
+        self::assertFalse($grand_prix->add_event_to_series(7, 3, ['series_part' => 'short', 'distance_m' => 15000]));
+        self::assertTrue($grand_prix->add_event_to_series(7, 3, ['series_part' => 'long', 'distance_m' => 15000, 'championship' => true]));
+        self::assertSame(1, end($this->db->inserted)['is_championship']);
+        // The part is read from the series when the caller does not pass it.
+        $this->db->series['series_part'] = 'short';
+        self::assertFalse($grand_prix->add_event_to_series(7, 4, ['distance_m' => 21097]));
+    }
+
+    public function test_headings_do_not_call_unlisted_sex_men(): void {
+        self::assertSame('Men', \PAUSATF\Results\GrandPrix::sex_label('M'));
+        self::assertSame('Women', \PAUSATF\Results\GrandPrix::sex_label('F'));
+        self::assertSame('Sex not listed', \PAUSATF\Results\GrandPrix::sex_label('X'));
+        self::assertSame('', \PAUSATF\Results\GrandPrix::sex_label('X', 'OVERALL'));
+    }
+
     public function test_unlabelled_open_result_is_kept_as_unknown_sex(): void {
         $this->db->results = [$this->row('Lee Kim', '', 1, 4)];
         $rows = $this->standings();
