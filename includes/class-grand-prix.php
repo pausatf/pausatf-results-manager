@@ -17,6 +17,8 @@ require_once __DIR__ . '/class-athlete-identity.php';
 
 require_once __DIR__ . '/class-grand-prix-scoring.php';
 
+require_once __DIR__ . '/class-grand-prix-standings.php';
+
 /**
  * Grand Prix series management
  */
@@ -27,6 +29,10 @@ class GrandPrix {
     private string $series_table;
     private string $standings_table;
 
+    /** Option holding the GP schema revision, so upgrades run without a version bump. */
+    public const SCHEMA_OPTION = 'pausatf_results_gp_schema';
+    public const SCHEMA = 2;
+
     public function __construct() {
         global $wpdb;
         $this->series_table = $wpdb->prefix . 'pausatf_grand_prix_series';
@@ -34,6 +40,14 @@ class GrandPrix {
 
         add_shortcode('pausatf_grand_prix', [$this, 'shortcode_standings']);
         add_action('pausatf_result_imported', [$this, 'update_standings_for_event'], 10, 2);
+        add_action('admin_init', [self::class, 'maybe_upgrade']);
+    }
+
+    /** Apply schema changes on sites that upgraded the plugin without reactivating it. */
+    public static function maybe_upgrade(): void {
+        if ((int) get_option(self::SCHEMA_OPTION, 0) < self::SCHEMA) {
+            self::create_tables();
+        }
     }
 
     /**
@@ -58,6 +72,8 @@ class GrandPrix {
             drop_worst int DEFAULT 0,
             bonus_points text DEFAULT NULL,
             divisions text DEFAULT NULL,
+            ruleset varchar(32) DEFAULT NULL,
+            series_part varchar(10) DEFAULT NULL,
             status enum('active','completed','archived') DEFAULT 'active',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
@@ -75,6 +91,9 @@ class GrandPrix {
             event_order int DEFAULT 0,
             multiplier decimal(3,2) DEFAULT 1.00,
             is_required tinyint(1) DEFAULT 0,
+            team_multiplier decimal(3,2) DEFAULT NULL,
+            is_championship tinyint(1) DEFAULT 0,
+            distance_m int unsigned DEFAULT NULL,
             PRIMARY KEY (id),
             UNIQUE KEY series_event (series_id, event_id),
             KEY series_id (series_id),
@@ -88,8 +107,12 @@ class GrandPrix {
             series_id bigint(20) unsigned NOT NULL,
             athlete_id bigint(20) unsigned DEFAULT NULL,
             athlete_name varchar(255) NOT NULL,
+            athlete_key varchar(191) NOT NULL DEFAULT '',
+            entry_type varchar(20) NOT NULL DEFAULT 'individual',
+            standing_type varchar(20) NOT NULL DEFAULT 'division',
+            verified tinyint(1) NOT NULL DEFAULT 0,
             division varchar(50) DEFAULT 'OPEN',
-            gender enum('M','F') NOT NULL,
+            gender enum('M','F','X') NOT NULL,
             total_points decimal(10,2) DEFAULT 0,
             races_completed int DEFAULT 0,
             rank_position int DEFAULT NULL,
@@ -97,7 +120,7 @@ class GrandPrix {
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY series_athlete (series_id, athlete_name, division, gender),
+            KEY series_entry (series_id, entry_type, standing_type, division, gender),
             KEY series_division (series_id, division, gender),
             KEY rank_position (rank_position)
         ) {$charset_collate};";
@@ -106,6 +129,19 @@ class GrandPrix {
         dbDelta($sql_series);
         dbDelta($sql_events);
         dbDelta($sql_standings);
+
+        // The old unique key on printed name merged homonyms and blocks the same athlete in a
+        // division and an age+ standing. dbDelta never drops indexes, so drop it here.
+        // Only the index goes; standings rows are untouched.
+        $old_index = $wpdb->get_var($wpdb->prepare(
+            "SHOW INDEX FROM {$standings_table} WHERE Key_name = %s",
+            'series_athlete'
+        ));
+        if ($old_index !== null) {
+            $wpdb->query("ALTER TABLE {$standings_table} DROP INDEX series_athlete");
+        }
+
+        update_option(self::SCHEMA_OPTION, self::SCHEMA);
     }
 
     /**
@@ -146,12 +182,21 @@ class GrandPrix {
         global $wpdb;
         $events_table = $wpdb->prefix . 'pausatf_grand_prix_events';
 
+        $distance_m = isset($options['distance_m']) ? (int) $options['distance_m'] : null;
+        $part = $options['series_part'] ?? ($distance_m !== null ? ($this->get_series($series_id)['series_part'] ?? null) : null);
+        if ($distance_m !== null && !empty($part) && GrandPrixRules::road_series_part($distance_m) !== $part) {
+            return false; // A Short series race is 10K or shorter; a Long series race 12K or longer.
+        }
+
         $data = [
             'series_id' => $series_id,
             'event_id' => $event_id,
             'event_order' => $options['order'] ?? 0,
             'multiplier' => $options['multiplier'] ?? 1.0,
             'is_required' => $options['required'] ?? 0,
+            'team_multiplier' => $options['team_multiplier'] ?? null,
+            'is_championship' => !empty($options['championship']) ? 1 : 0,
+            'distance_m' => $distance_m,
         ];
 
         return (bool) $wpdb->insert($events_table, $data);
@@ -247,6 +292,11 @@ class GrandPrix {
 
         $results = $wpdb->get_results($wpdb->prepare($sql, ...$event_ids), ARRAY_A);
 
+        $rules = GrandPrixRules::get((string) ($series['ruleset'] ?? ''));
+        if ($rules !== null) {
+            return $this->store_rule_standings($series_id, GrandPrixStandings::compute($rules, $events, $results, (int) ($series['season_year'] ?? gmdate('Y'))));
+        }
+
         // Group results by athlete
         $athletes = [];
         foreach ($results as $result) {
@@ -332,6 +382,8 @@ class GrandPrix {
                         'series_id' => $series_id,
                         'athlete_id' => $athlete['athlete_id'],
                         'athlete_name' => $athlete['name'],
+                        'athlete_key' => $athlete['identity']['key'],
+                        'verified' => $athlete['identity']['verified'] ? 1 : 0,
                         'division' => $division,
                         'gender' => $gender,
                         'total_points' => $athlete['total_points'],
@@ -347,6 +399,34 @@ class GrandPrix {
     }
 
     /**
+     * Replace a series' standings with rows from GrandPrixStandings::compute().
+     *
+     * @param list<array<string, mixed>> $rows
+     */
+    private function store_rule_standings(int $series_id, array $rows): int {
+        global $wpdb;
+        $wpdb->delete($this->standings_table, ['series_id' => $series_id]);
+        foreach ($rows as $row) {
+            $wpdb->insert($this->standings_table, [
+                'series_id' => $series_id,
+                'athlete_id' => $row['athlete_id'],
+                'athlete_name' => $row['name'],
+                'athlete_key' => $row['key'],
+                'entry_type' => $row['entry_type'],
+                'standing_type' => $row['standing_type'],
+                'verified' => $row['verified'] ? 1 : 0,
+                'division' => $row['division'],
+                'gender' => $row['gender'],
+                'total_points' => $row['total_points'],
+                'races_completed' => $row['races_completed'],
+                'rank_position' => $row['rank_position'],
+                'results_data' => json_encode($row['races']),
+            ]);
+        }
+        return count($rows);
+    }
+
+    /**
      * Get standings for a series
      *
      * @param int $series_id Series ID
@@ -358,6 +438,17 @@ class GrandPrix {
 
         $where = ['series_id = %d'];
         $params = [$series_id];
+
+        // Division standings by default; 'age_plus' and 'team' select the others.
+        $type = $filters['type'] ?? 'division';
+        if ($type === 'team') {
+            $where[] = 'entry_type = %s';
+            $params[] = 'team';
+        } else {
+            $where[] = 'entry_type = %s AND standing_type = %s';
+            $params[] = 'individual';
+            $params[] = $type === 'age_plus' ? 'age_plus' : 'division';
+        }
 
         if (!empty($filters['division'])) {
             $where[] = 'division = %s';
@@ -416,6 +507,7 @@ class GrandPrix {
             'year' => date('Y'),
             'division' => '',
             'gender' => '',
+            'type' => 'division',
             'limit' => 50,
         ], $atts);
 
@@ -431,6 +523,7 @@ class GrandPrix {
         $standings = $this->get_standings($series['id'], [
             'division' => $atts['division'],
             'gender' => $atts['gender'],
+            'type' => $atts['type'],
             'limit' => (int) $atts['limit'],
         ]);
 
@@ -468,7 +561,7 @@ class GrandPrix {
                 <?php foreach ($by_division as $key => $division_standings): ?>
                     <?php
                     $first = $division_standings[0];
-                    $label = ($first['gender'] === 'F' ? 'Women' : 'Men') . ' ' . $first['division'];
+                    $label = trim(self::sex_label((string) $first['gender'], (string) $first['division']) . ' ' . $first['division']);
                     ?>
                     <div class="division-standings">
                         <h3><?php echo esc_html($label); ?></h3>
@@ -506,6 +599,16 @@ class GrandPrix {
         </div>
         <?php
         return ob_get_clean();
+    }
+
+    /** Heading word for a standings group's sex. X rows have no listed sex and are not called Men. */
+    public static function sex_label(string $gender, string $division = ''): string {
+        return match (true) {
+            $gender === 'M' => 'Men',
+            $gender === 'F' => 'Women',
+            $division === 'OVERALL' => '',
+            default => 'Sex not listed',
+        };
     }
 
     /**
