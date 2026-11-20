@@ -9,6 +9,8 @@
 
 namespace PAUSATF\Results\Integrations;
 
+use PAUSATF\Results\PlacementTime;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -232,17 +234,24 @@ class RunSignUpIntegration {
         global $wpdb;
         $table = $wpdb->prefix . 'pausatf_results';
         $imported = 0;
+        $basis = PlacementTime::basis($event_id);
 
         foreach ($results as $result) {
             $user = $result['user'] ?? [];
+            [$seconds, $used] = PlacementTime::choose(
+                $this->parse_time((string) ($result['clock_time'] ?? '')),
+                $this->parse_time((string) ($result['chip_time'] ?? '')),
+                $basis,
+                $result
+            );
 
             $data = [
                 'event_id' => $event_id,
                 'athlete_name' => trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')),
                 'athlete_age' => $this->calculate_age($user['dob'] ?? null),
                 'place' => (int) ($result['place'] ?? 0),
-                'time_seconds' => $this->parse_time($result['clock_time'] ?? $result['chip_time'] ?? ''),
-                'time_display' => $result['clock_time'] ?? $result['chip_time'] ?? '',
+                'time_seconds' => PlacementTime::official_seconds($seconds),
+                'time_display' => (string) (($used === PlacementTime::NET ? $result['chip_time'] ?? null : $result['clock_time'] ?? null) ?? ''),
                 'division' => $result['age_group'] ?? null,
                 'division_place' => (int) ($result['age_group_place'] ?? 0),
                 'bib' => $result['bib_num'] ?? null,
@@ -310,15 +319,16 @@ class RunSignUpIntegration {
     /**
      * Parse time string to seconds
      */
-    private function parse_time(string $time): ?int {
+    private function parse_time(string $time): ?float {
         $time = trim($time);
 
-        if (preg_match('/^(\d+):(\d{2}):(\d{2})/', $time, $m)) {
-            return ((int) $m[1] * 3600) + ((int) $m[2] * 60) + (int) $m[3];
+        // Keep fractions: the official time is rounded up later, not truncated here.
+        if (preg_match('/^(\d+):(\d{2}):(\d{2}(?:\.\d+)?)/', $time, $m)) {
+            return ((int) $m[1] * 3600) + ((int) $m[2] * 60) + (float) $m[3];
         }
 
-        if (preg_match('/^(\d+):(\d{2})/', $time, $m)) {
-            return ((int) $m[1] * 60) + (int) $m[2];
+        if (preg_match('/^(\d+):(\d{2}(?:\.\d+)?)/', $time, $m)) {
+            return ((int) $m[1] * 60) + (float) $m[2];
         }
 
         return null;

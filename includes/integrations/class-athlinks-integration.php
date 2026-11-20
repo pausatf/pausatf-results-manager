@@ -9,6 +9,8 @@
 
 namespace PAUSATF\Results\Integrations;
 
+use PAUSATF\Results\PlacementTime;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -149,6 +151,12 @@ class AthlinksIntegration {
 
         $athlete = get_post($athlete_id);
         $athlete_name = $athlete ? $athlete->post_title : '';
+        [$seconds, $used] = PlacementTime::choose(
+            isset($result['gunTime']) ? $result['gunTime'] / 1000 : null,
+            isset($result['chipTime']) ? $result['chipTime'] / 1000 : null,
+            PlacementTime::basis($event_id),
+            $result
+        );
 
         $data = [
             'event_id' => $event_id,
@@ -157,8 +165,8 @@ class AthlinksIntegration {
             'place' => $result['overallPlace'] ?? null,
             'division' => $result['divisionName'] ?? null,
             'division_place' => $result['divisionPlace'] ?? null,
-            'time_seconds' => $this->parse_athlinks_time($result['chipTime'] ?? $result['gunTime'] ?? null),
-            'time_display' => $result['chipTimeFormatted'] ?? $result['gunTimeFormatted'] ?? '',
+            'time_seconds' => PlacementTime::official_seconds($seconds),
+            'time_display' => (string) (($used === PlacementTime::NET ? $result['chipTimeFormatted'] ?? null : $result['gunTimeFormatted'] ?? null) ?? ''),
             'pace' => $result['paceFormatted'] ?? null,
             'raw_data' => json_encode([
                 'athlinks_result_id' => $result['resultId'],
@@ -230,16 +238,6 @@ class AthlinksIntegration {
         ));
 
         return $count > 0;
-    }
-
-    /**
-     * Parse Athlinks time to seconds
-     */
-    private function parse_athlinks_time(?int $milliseconds): ?int {
-        if (!$milliseconds) {
-            return null;
-        }
-        return (int) round($milliseconds / 1000);
     }
 
     /**

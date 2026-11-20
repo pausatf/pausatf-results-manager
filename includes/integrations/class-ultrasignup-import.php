@@ -10,6 +10,7 @@
 namespace PAUSATF\Results\Integrations;
 
 use PAUSATF\Results\ListedSex;
+use PAUSATF\Results\PlacementTime;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -253,14 +254,14 @@ class UltraSignupImport {
             return null;
         }
 
-        // HH:MM:SS format
-        if (preg_match('/^(\d+):(\d{2}):(\d{2})/', $time, $m)) {
-            return ((int) $m[1] * 3600) + ((int) $m[2] * 60) + (int) $m[3];
+        // HH:MM:SS format; fractions round up to the next second (Rule 165.11(c))
+        if (preg_match('/^(\d+):(\d{2}):(\d{2}(?:\.\d+)?)/', $time, $m)) {
+            return PlacementTime::official_seconds(((int) $m[1] * 3600) + ((int) $m[2] * 60) + (float) $m[3]);
         }
 
         // MM:SS format
-        if (preg_match('/^(\d+):(\d{2})/', $time, $m)) {
-            return ((int) $m[1] * 60) + (int) $m[2];
+        if (preg_match('/^(\d+):(\d{2}(?:\.\d+)?)/', $time, $m)) {
+            return PlacementTime::official_seconds(((int) $m[1] * 60) + (float) $m[2]);
         }
 
         return null;
