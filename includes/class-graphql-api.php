@@ -445,6 +445,10 @@ class GraphQLAPI {
             $params[] = strtoupper($args['gender']);
         }
 
+        [$visible, $visible_params] = AgeGrading::rankings_where();
+        $where[] = $visible;
+        array_push($params, ...$visible_params);
+
         $limit = min((int) ($args['limit'] ?? 50), 200);
         $params[] = $limit;
 

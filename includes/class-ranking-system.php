@@ -69,6 +69,7 @@ class RankingSystem {
             best_date date DEFAULT NULL,
             performances_count int DEFAULT 1,
             age_graded_score decimal(8,4) DEFAULT NULL,
+            age_grade_edition varchar(64) DEFAULT NULL,
             points decimal(10,2) DEFAULT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -235,6 +236,12 @@ class RankingSystem {
 
         $ranking_type = 'age_graded';
 
+        // No factor table, no age-graded rankings (AgeGrading ships none).
+        $table = AgeGrading::table();
+        if ($table === null) {
+            return 0;
+        }
+
         // Get all performances with age
         $sql = "SELECT
                     r.*,
@@ -244,10 +251,11 @@ class RankingSystem {
                 " . EventDate::sql_join('e.ID', 'pm') . "
                 WHERE r.time_seconds IS NOT NULL
                   AND r.time_seconds > 0
-                  AND r.athlete_age IS NOT NULL
+                  AND r.athlete_age >= %d
+                  AND r.sex = %s
                   AND (e.post_title LIKE %s OR e.post_title LIKE %s)";
 
-        $params = ['%' . $event . '%', '%' . str_replace('K', ' K', $event) . '%'];
+        $params = [AgeGrading::MIN_AGE, $gender, '%' . $event . '%', '%' . str_replace('K', ' K', $event) . '%'];
 
         if ($season) {
             $sql .= " AND YEAR(" . EventDate::sql_expr('pm') . ") = %d";
@@ -259,12 +267,7 @@ class RankingSystem {
         // Calculate age-graded scores
         $scored_results = [];
         foreach ($results as $result) {
-            $age_grade = $this->calculate_age_grade(
-                $event,
-                $result['time_seconds'],
-                $result['athlete_age'],
-                $gender
-            );
+            $age_grade = AgeGrading::grade($event, (float) $result['time_seconds'], (int) $result['athlete_age'], $gender, $table);
 
             if ($age_grade) {
                 $scored_results[] = array_merge($result, [
@@ -326,83 +329,11 @@ class RankingSystem {
                 'best_result_id' => $result['id'],
                 'best_date' => $result['event_date'],
                 'age_graded_score' => $result['age_graded_score'],
+                'age_grade_edition' => $table['edition'],
             ]);
         }
 
         return $rank;
-    }
-
-    /**
-     * Calculate age-graded score
-     * Uses WMA age-grading factors
-     */
-    private function calculate_age_grade(
-        string $event,
-        int $time_seconds,
-        int $age,
-        string $gender
-    ): ?array {
-        // WMA age-grading factors (simplified - real implementation would use full tables)
-        $factors = $this->get_age_grading_factor($event, $age, $gender);
-
-        if (!$factors) {
-            return null;
-        }
-
-        $age_graded_time = $time_seconds * $factors['factor'];
-        $percentage = ($factors['standard'] / $time_seconds) * 100;
-
-        return [
-            'age_graded_time' => $age_graded_time,
-            'percentage' => round($percentage, 2),
-            'factor' => $factors['factor'],
-        ];
-    }
-
-    /**
-     * Get WMA age-grading factor
-     */
-    private function get_age_grading_factor(string $event, int $age, string $gender): ?array {
-        // Simplified factors - real implementation would load from database/file
-        // These are approximate open class standards and factors
-
-        $standards = [
-            '5K' => ['M' => 780, 'F' => 900], // ~13:00 / ~15:00
-            '10K' => ['M' => 1620, 'F' => 1920], // ~27:00 / ~32:00
-            'Half Marathon' => ['M' => 3600, 'F' => 4320], // 1:00:00 / 1:12:00
-            'Marathon' => ['M' => 7560, 'F' => 9180], // 2:06:00 / 2:33:00
-        ];
-
-        // Age factors (simplified - actual WMA tables have per-year factors)
-        $age_factors = [
-            'M' => [
-                30 => 1.000, 35 => 0.990, 40 => 0.970, 45 => 0.940,
-                50 => 0.905, 55 => 0.865, 60 => 0.820, 65 => 0.770,
-                70 => 0.715, 75 => 0.655, 80 => 0.590, 85 => 0.520,
-            ],
-            'F' => [
-                30 => 1.000, 35 => 0.992, 40 => 0.975, 45 => 0.950,
-                50 => 0.918, 55 => 0.880, 60 => 0.835, 65 => 0.785,
-                70 => 0.730, 75 => 0.670, 80 => 0.605, 85 => 0.535,
-            ],
-        ];
-
-        if (!isset($standards[$event][$gender])) {
-            return null;
-        }
-
-        // Find appropriate age bracket
-        $age_bracket = 30;
-        foreach (array_keys($age_factors[$gender]) as $bracket) {
-            if ($age >= $bracket) {
-                $age_bracket = $bracket;
-            }
-        }
-
-        return [
-            'standard' => $standards[$event][$gender],
-            'factor' => $age_factors[$gender][$age_bracket],
-        ];
     }
 
     /**
@@ -444,6 +375,10 @@ class RankingSystem {
             $params[] = $filters['division'];
         }
 
+        [$visible, $visible_params] = AgeGrading::rankings_where();
+        $where[] = $visible;
+        array_push($params, ...$visible_params);
+
         $where_sql = implode(' AND ', $where);
         $params[] = $limit;
         $params[] = $offset;
@@ -462,9 +397,10 @@ class RankingSystem {
     public function get_athlete_rankings(int $athlete_id, ?int $season = null): array {
         global $wpdb;
 
+        [$visible, $params] = AgeGrading::rankings_where();
         $sql = "SELECT * FROM {$this->rankings_table}
-                WHERE athlete_id = %d";
-        $params = [$athlete_id];
+                WHERE athlete_id = %d AND {$visible}";
+        array_unshift($params, $athlete_id);
 
         if ($season) {
             $sql .= " AND (season_year = %d OR ranking_type = 'all_time')";
@@ -488,9 +424,10 @@ class RankingSystem {
 
         foreach ($events as $event) {
             foreach ($genders as $gender) {
-                // Age-graded rankings
-                $count = $this->generate_age_graded_rankings($event, $gender, $season);
-                $results[] = "Age-graded {$event} {$gender}: {$count} ranked";
+                if (AgeGrading::rankings_enabled()) {
+                    $count = $this->generate_age_graded_rankings($event, $gender, $season);
+                    $results[] = "Age-graded {$event} {$gender}: {$count} ranked";
+                }
 
                 // Division rankings
                 foreach ($divisions as $division) {
