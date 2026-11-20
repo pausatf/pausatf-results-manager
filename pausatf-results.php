@@ -393,6 +393,8 @@ final class Plugin {
         // Load core classes (always required)
         require_once PAUSATF_RESULTS_DIR . 'includes/class-age-grading.php';
         AgeGrading::register_cli();
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-gp-eligibility.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-xc-team-scoring.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-event-date.php';
         EventDate::register();
         require_once PAUSATF_RESULTS_DIR . 'includes/class-listed-sex.php';
