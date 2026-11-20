@@ -35,14 +35,14 @@ final class ArchiveOwnershipTest extends TestCase
     /** @depends testSiteArchiveAbsentKeepsTheBundledArchive */
     public function testSiteArchiveActiveDefersTheBundledArchive(): void
     {
-        eval('namespace PAUSATF\\SEO\\Archive { final class Module {} } namespace { function pausatf_archive_register_hooks(): void {} }');
+        require_once __DIR__ . '/fixtures/site-stubs/archive.php';
         self::assertTrue(ArchiveOwnership::site_provides());
     }
 
     /** @depends testSiteArchiveActiveDefersTheBundledArchive */
     public function testSiteModuleSwitchedOffKeepsTheBundledArchive(): void
     {
-        eval('namespace PAUSATF\\SEO { final class Modules { public static bool $archive = false; public static function enabled(string $module): bool { return $module !== "archive" || self::$archive; } } }');
+        require_once __DIR__ . '/fixtures/site-stubs/modules.php';
         self::assertFalse(ArchiveOwnership::site_provides());
         \PAUSATF\SEO\Modules::$archive = true;
         self::assertTrue(ArchiveOwnership::site_provides());
