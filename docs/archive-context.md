@@ -1,5 +1,7 @@
 # Archive context operator guide
 
+> **Deferral.** This guide covers the archive bundled with Results Manager (RM). When PAUSATF Site's Archive module is active, RM does not load it: no **Archive review** menu, no `pausatf/v1/archive/*` routes, no `[pausatf_archive_release]` shortcode and no `pausatf-results archive` commands. PAUSATF Site serves the archive instead, under its own `pausatf/v2` routes and `pausatf_archive` content. Without PAUSATF Site's Archive, everything below applies as written. The `pausatf_results_defer_archive_to_site` filter forces either behavior (it takes the detected boolean and returns the one to use). The bundled code stays in RM until production runs PAUSATF Site's Archive. Data already in the `pausatf_archive_*` tables is not touched by deferral. Athlete identity reads the site's archive tables, not these.
+
 The archive workflow stores original result context as immutable candidates, requires a different administrator to verify each candidate, and publishes only explicitly approved versions. It uses additive tables and does not import candidates into the existing results or athlete tables.
 
 This implementation has been exercised with isolated fixtures. These instructions do not establish production deployment, a completed archive migration, or verified historical ruleset applicability.

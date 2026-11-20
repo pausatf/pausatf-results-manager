@@ -19,7 +19,13 @@ The race director portal's "USATF Sanctioned?" field on events is unrelated and 
 
 ## What was kept
 
-Nothing stored by the manager was deleted:
+Nothing stored by the manager was deleted. The manager's feature (`sanctions_manager`) was off by default and created its tables only when enabled, so a site that never turned it on has none of the tables below. Check first:
+
+```sh
+wp db query "SHOW TABLES LIKE '$(wp db prefix)pausatf_sanction%'"
+```
+
+The data that may exist:
 
 | Data | Where |
 |---|---|
@@ -29,13 +35,25 @@ Nothing stored by the manager was deleted:
 | Change history | `{prefix}pausatf_sanction_history` |
 | Notification address | option `pausatf_sanctions_notification_email` |
 | Certificate files named in `certificate_file` | wherever they were stored, usually the uploads directory |
-| Role capabilities | `manage_sanctions`, `review_sanctions`, `submit_sanctions`, `view_own_sanctions` on Administrator, Editor and Subscriber |
+| Role capabilities | Stored in the `{prefix}user_roles` option (see below) |
 
-`{prefix}` is the site's table prefix, usually `wp_`. Uninstalling the plugin removes the option, as before, and leaves the tables, as it does for all result data.
+The manager granted these capabilities to roles on `admin_init`:
+
+| Role | Capabilities |
+| --- | --- |
+| Administrator | `manage_sanctions`, `review_sanctions`, `submit_sanctions`, `view_own_sanctions` |
+| Editor | `review_sanctions`, `submit_sanctions`, `view_own_sanctions` |
+| Subscriber | `submit_sanctions`, `view_own_sanctions` |
+
+The roles are listed from the manager's last released code, which this release removed. No code adds or checks these capabilities now. A `sanctions_manager` entry in the `pausatf_features` option is ignored.
+
+`{prefix}` is the site's table prefix, usually `wp_`. Uninstalling the plugin removes the notification option, as before, and leaves the tables and the capabilities, as it does for all result data.
+
+Removed endpoints, for anyone who linked to them: the AJAX actions `pausatf_save_sanction`, `pausatf_delete_sanction`, `pausatf_submit_sanction`, `pausatf_approve_sanction`, `pausatf_reject_sanction` and `pausatf_save_sanction_report`, and the REST routes under `/wp-json/pausatf/v1/sanctions` (list, single, `submit`, `approve`, `reject` and `fees`).
 
 ## Export the records
 
-Run from the WordPress root with WP-CLI. Keep the files with the association's records.
+Run from the WordPress root with WP-CLI, and only for tables the check above found. A missing table makes its command fail. Keep the files with the association's records.
 
 ```sh
 prefix="$(wp db prefix)"
@@ -49,7 +67,7 @@ The `.sql` file restores the tables exactly; the `.tsv` files are for reading in
 
 ## Remove the records later
 
-Only after the export is verified and the association agrees the records are no longer needed:
+Only after the export is verified and the association agrees the records are no longer needed. The commands are not reversible, and RM does not run them for you.
 
 ```sh
 prefix="$(wp db prefix)"

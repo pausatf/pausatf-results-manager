@@ -1,161 +1,107 @@
 # PAUSATF Results Manager
 
-## Dependency compatibility and verification
+A WordPress plugin that imports Pacific Association USA Track & Field (PAUSATF) competition results from legacy HTML pages and other sources, stores them with athlete and event records, and applies USATF and PA scoring rules to them. It exists because PA's results span 1994 to 2025 in several incompatible page formats, and the association's rules (age classifications, placement time, Grand Prix scoring) need to be applied the same way to all of them.
 
-Development uses `@wordpress/scripts` 36, React/React DOM 18.3.1 and ESLint 9.39.5 constraints.
-React 19 and ESLint 10 remain deferred until the affected peers support them; targeted Dependabot ignores retain
-supported minor/patch updates. The ESLint override is scoped to `@wordpress/scripts`.
-Do not install with forced or legacy peer resolution. The lockfile is authoritative for installed versions.
-`@types/node` tracks 26.6.3 or newer; this type package does not change the Node runtime floor of 22.22.2.
+It is built for the PAUSATF site and runs next to PAUSATF Site, which owns events, the results archive and athlete identity. It also runs on its own.
 
-```bash
-mise exec node@22.22.2 -- npm ci
-mise exec node@22.22.2 -- npm run build
-mise exec node@22.22.2 -- npm run lint
-mise exec node@22.22.2 -- npm run test:unit
-```
+## What it does
 
-`test:unit` permits an empty Jest suite, so success alone does not prove unit coverage.
-PHPUnit and browser/API verification use the separate PHP and [E2E harnesses](tests/e2e/README.md).
-Repository CI and dependency validation do not establish production deployment.
+- **Imports results** from HTML tables (2008 on), fixed-width text (1996 to 2007) and Word-generated HTML, by URL, by year, on a schedule, or from canonical event JSON. CSV, Hy-Tek, RunSignUp, Athlinks, UltraSignUp and timing-system importers are available to site code.
+- **Displays results** with shortcodes, a public REST API, and optional GraphQL, RDF and SPARQL endpoints.
+- **Applies USATF rules** from the 2026 Competition Rules: Rule 141 classifications, Rule 320 masters divisions, sex kept as listed, Rule 165 placement time and Rule 265.4 road record course limits. See [classification-and-records.md](docs/classification-and-records.md).
+- **Computes Grand Prix standings** for the 2026 PA road, cross country and MUT rules, including team scoring. See [grand-prix.md](docs/grand-prix.md).
+- **Tracks athletes, records and rankings**, with age-graded rankings that stay off until an age-grading table is imported. See [age-grading.md](docs/age-grading.md).
 
-WordPress plugin to import, manage, and display PAUSATF (Pacific Association USA Track & Field) legacy competition results with full athlete tracking.
+## Status and limits
 
-## Features
-
-- **Multi-format HTML Parser**: Automatically detects and parses:
-  - HTML tables (2008+)
-  - PRE/fixed-width formatted text (1996-2007)
-  - Microsoft Word-generated HTML
-
-- **Custom Post Types**:
-  - Events (results from competitions)
-  - Athletes (competitor profiles with career statistics)
-
-- **Taxonomies**:
-  - Event Type (Cross Country, Road Race, Track & Field, Race Walk, Mountain/Ultra/Trail)
-  - Season/Year
-  - Division (Open, Masters 40+, Seniors 50+, etc.)
-
-- **Import Options**:
-  - Single URL import
-  - Batch import by year
-  - File upload
-  - Automatic scheduled sync
-
-- **Data Display**:
-  - Shortcodes for results, athletes, and leaderboards
-  - REST API for programmatic access
-  - Athlete search
-
-## Installation
-
-1. Upload the `pausatf-results-manager` folder to `/wp-content/plugins/`
-2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Navigate to **PAUSATF Results** in the admin menu
+- Grand Prix standings are computed from the PA rule texts and tested on constructed data. They have not been reconciled with standings PA has published, and every row is unverified until the site supplies membership and club data. Treat them as unofficial. See [grand-prix.md](docs/grand-prix.md).
+- The plugin ships no age-grading factors. Age-graded rankings need an imported table.
+- RM does not check membership, residency or eligibility for a sex category. It records what the results list.
+- Several admin features have no screen and are driven from code or WP-CLI: Grand Prix series, and most integrations. See [modules.md](docs/modules.md).
 
 ## Requirements
 
-- WordPress 6.0+
-- PHP 8.4+ (Composer requirement and CI runtime)
+- WordPress 6.0 or newer (CI runs 7.1.x)
+- PHP 8.4 or newer
+- MySQL 8.0 or newer (rankings use window functions; CI runs 8.4)
 
-## Upgrade notes
+## Install
 
-- **Sanctions Manager retired.** USATF takes sanction applications online at usatf.org (2026 USATF Governance Handbook, Regulation 23-C), so this plugin no longer loads the Sanctions Manager: no admin page, AJAX or REST routes, public forms, fee table or reminder cron. Pages that still contain `[pausatf_sanction_form]`, `[pausatf_my_sanctions]` or `[pausatf_sanctioned_events]` show a short notice linking to PA's sanctions page; the `pausatf_results_sanctions_url` filter changes the link. Existing sanction records are not touched. See [docs/sanctions-retirement.md](docs/sanctions-retirement.md) to export or remove them.
+1. Copy the `pausatf-results-manager` folder to `/wp-content/plugins/`. The Composer package `pausatf/results-manager` has type `wordpress-plugin`.
+2. Activate it under **Plugins**. Activation creates the core tables and schedules the sync event.
+3. Open **PAUSATF Results** in the admin menu. Choose features under **Settings > Features**.
 
-## Usage
+Upgrading from an earlier release? Read [upgrading.md](docs/upgrading.md). Nothing in the upgrade deletes data.
 
-For immutable archive candidates, independent verification and explicit publication, see the [archive context operator guide](docs/archive-context.md). Archive tables require explicit installation; this workflow preserves existing results tables.
+## Use
 
-When PAUSATF Site's Archive module is active, this plugin does not load its own archive (admin menu, `pausatf/v1/archive/*` REST routes, `pausatf_archive_release` shortcode, and `pausatf-results archive` CLI); PAUSATF Site serves `pausatf/v2` and `pausatf_archive`. Without it the bundled archive loads as before. The `pausatf_results_defer_archive_to_site` filter forces either behavior.
+Import a results page from **PAUSATF Results > Import**: enter a URL from `https://www.pausatf.org/data/`, choose **Analyze** to preview the detected format, then **Import Results**. To import a whole year, use **Batch Import by Year**. Canonical event JSON can be posted to `/wp-json/pausatf/v1/events/import` by an administrator.
 
-### Shortcodes
+Shortcodes:
 
-```php
-// Display results for an event
+```text
 [pausatf_results event_id="123"]
-
-// Display results filtered by year and division
 [pausatf_results year="2024" division="Open"]
-
-// Display athlete profile
 [pausatf_athlete name="John Smith"]
-
-// Display leaderboard
 [pausatf_leaderboard division="Masters 40+" year="2024"]
-
-// Athlete search form
 [pausatf_search]
+[pausatf_grand_prix series="road-short" year="2026" type="division"]
 ```
 
-### REST API
+Public REST routes (namespace `pausatf/v1`):
 
-```
+```text
 GET /wp-json/pausatf/v1/events/{id}/results
 GET /wp-json/pausatf/v1/athletes/search?q=smith
 GET /wp-json/pausatf/v1/athletes/{name}/results
 GET /wp-json/pausatf/v1/leaderboard?division=Open&year=2024
 GET /wp-json/pausatf/v1/divisions
 GET /wp-json/pausatf/v1/seasons
-POST /wp-json/pausatf/v1/import (requires authentication)
 ```
 
-### Importing Data
+Import routes (`POST /import`, `POST /events/import`) require an administrator. The full list of shortcodes, routes, hooks, CLI commands, cron jobs and tables is in [reference.md](docs/reference.md).
 
-1. Go to **PAUSATF Results → Import**
-2. Enter a URL from `https://www.pausatf.org/data/`
-3. Click "Analyze" to preview the format detection
-4. Click "Import Results" to import
+## Changes that affect operators
 
-For bulk imports, select a year and click "Start Batch Import".
+- **Sanctions Manager retired.** USATF takes sanction applications online (2026 USATF Governance Handbook, Regulation 23-C), so the manager no longer loads. Old sanction data is kept. See [sanctions-retirement.md](docs/sanctions-retirement.md).
+- **Archive deferred.** When PAUSATF Site's Archive module is active, RM's own archive (menu, `pausatf/v1/archive/*` routes, `[pausatf_archive_release]` and the `archive` CLI) does not load. See [archive-context.md](docs/archive-context.md).
+- **Event dates** come from `_pausatf_event_start` first, then `_pausatf_event_date`.
+- **Sex** is stored as listed. A value other than M or F is shown but not scored.
 
-## Data Source
+Details and the steps to take are in [upgrading.md](docs/upgrading.md).
 
-Legacy results are imported from: https://www.pausatf.org/data/
+## Documentation
 
-Data spans 1994-2025 with varying HTML formats.
+| Page | Covers |
+| --- | --- |
+| [docs/upgrading.md](docs/upgrading.md) | Schema upgrade, retired and changed behavior, data a site must supply |
+| [docs/reference.md](docs/reference.md) | Post types, tables, options, REST, shortcodes, CLI, cron, hooks |
+| [docs/modules.md](docs/modules.md) | Features, admin screens, importers, parsers |
+| [docs/classification-and-records.md](docs/classification-and-records.md) | Classifications, divisions, sex, placement time, records, with rule cites |
+| [docs/grand-prix.md](docs/grand-prix.md) | Road, cross country and MUT standings, hooks, open questions |
+| [docs/age-grading.md](docs/age-grading.md) | Factor table format, import, why rankings stay off |
+| [docs/athlete-identity.md](docs/athlete-identity.md) | How a printed name becomes an identity key |
+| [docs/sanctions-retirement.md](docs/sanctions-retirement.md) | Exporting or removing old sanction data |
+| [docs/archive-context.md](docs/archive-context.md) | The bundled archive workflow |
+| [docs/development.md](docs/development.md) | Tests, CI, hooks, layout |
+| [tests/e2e/README.md](tests/e2e/README.md) | The end-to-end harness |
+| [CHANGELOG.md](CHANGELOG.md) | Release notes |
 
 ## Development
 
-JavaScript development tooling requires Node.js 22.22.2 or newer and npm 10 or newer. Install the development dependencies with `npm ci`. The npm scripts provide build, lint, and Jest unit-test commands (`npm run build`, `npm run lint`, and `npm run test:unit`).
-
-### Directory Structure
-
-```
-pausatf-results-manager/
-├── pausatf-results.php           # Main plugin file
-├── includes/
-│   ├── class-results-importer.php
-│   ├── class-athlete-database.php
-│   └── parsers/
-│       ├── interface-parser.php
-│       ├── class-parser-detector.php
-│       ├── class-parser-table.php
-│       ├── class-parser-pre.php
-│       └── class-parser-word.php
-├── admin/
-│   ├── views/
-│   └── class-admin-*.php
-├── public/
-│   ├── class-shortcodes.php
-│   └── class-rest-api.php
-├── cron/
-│   └── class-sync-scheduler.php
-└── assets/
-    ├── css/
-    └── js/
+```sh
+composer install
+vendor/bin/phpunit
 ```
 
-### Adding a New Parser
+Node tooling for the JavaScript and CSS assets needs Node 22.22.2 or newer; install with `npm ci` and do not force peer resolution. Commands, CI and the pre-push hook are in [development.md](docs/development.md). Repository CI does not establish a production deployment.
 
-1. Create a class implementing `ParserInterface`
-2. Implement `can_parse()`, `parse()`, `get_priority()`, and `get_id()`
-3. Register in `ParserDetector::register_default_parsers()`
+New parsers implement `ParserInterface` (`can_parse()`, `parse()`, `get_priority()`, `get_id()`) and are registered in `ParserDetector::register_default_parsers()`.
+
+## Security
+
+Report vulnerabilities privately through GitHub's private vulnerability reporting; see [SECURITY.md](SECURITY.md).
 
 ## License
 
-GPL v2 or later
-
-## Credits
-
-Built for the Pacific Association of USA Track & Field.
+GPL-2.0-or-later. See [LICENSE](LICENSE).

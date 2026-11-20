@@ -2,7 +2,7 @@
 
 ## Purpose
 
-WordPress plugin to import, manage, and display PA-USATF legacy competition results with athlete tracking. Parses multiple HTML formats (tables, PRE/fixed-width, Word-generated) spanning 1994-2025.
+WordPress plugin to import, manage, and display PA-USATF legacy competition results with athlete tracking, USATF classification rules and PA Grand Prix standings. Parses multiple HTML formats (tables, PRE/fixed-width, Word-generated) spanning 1994-2025. Documentation is in `README.md` and `docs/`; start with `docs/reference.md`.
 
 ## Stack
 
@@ -10,9 +10,9 @@ WordPress plugin to import, manage, and display PA-USATF legacy competition resu
 |-----------|---------|
 | PHP | >= 8.4 |
 | WordPress | 6.0+ |
-| Testing | PHPUnit 11, Codeception 5 (E2E) |
+| Testing | PHPUnit 13, Codeception 5 (E2E) |
 | Linting | PHPCS with WPCS 3.1, PHPStan (WordPress extension) |
-| JS Build | @wordpress/scripts 36 |
+| JS Build | @wordpress/scripts 37 |
 | JS Lint | @wordpress/eslint-plugin |
 | Node | >= 22.22.2, selected through mise |
 | SBOM | CycloneDX (PHP + npm) |
@@ -24,9 +24,10 @@ WordPress plugin to import, manage, and display PA-USATF legacy competition resu
 - Sanitize all input (`sanitize_text_field`, etc.)
 - Use nonces for form submissions
 - Enqueue scripts/styles properly
-- PSR-4 autoloading under `PAUSATF\Results\` namespace
+- Classes live in the `PAUSATF\Results\` namespace and are loaded with explicit `require_once` (see `docs/development.md`)
 - PHPStan for static analysis
 - `@wordpress/scripts` for JS/CSS build and lint
+- Update `docs/` and `CHANGELOG.md` in the same change as any behavior change
 
 ## Commands
 
@@ -62,8 +63,8 @@ npm run security:check
 
 - Main plugin file: `pausatf-results.php`
 - Namespace: `PAUSATF\Results\*` (PSR-4 from `includes/`)
-- Custom post types: Events, Athletes
-- Taxonomies: Event Type, Season/Year, Division
+- Custom post types: Events (deferred to PAUSATF Site when its Events module is active), Athletes, Clubs, Profile Claims
+- Taxonomies: Event Type, Season, Division, Discipline, Series, Region
 - REST API at `/wp-json/pausatf/v1/*`
-- Shortcodes: `[pausatf_results]`, `[pausatf_athlete]`, `[pausatf_leaderboard]`, `[pausatf_search]`
+- Shortcodes: see `docs/reference.md`
 - New parsers implement `ParserInterface` and register in `ParserDetector`
