@@ -9,6 +9,12 @@ updates:
       day: "monday"
     labels:
       - "dependencies"
+    groups:
+      # Every github/codeql-action step in a workflow must run the same
+      # version, so bump init, autobuild and analyze in one PR.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
 
   # PHP (plugin dev tooling)
   - package-ecosystem: "composer"
