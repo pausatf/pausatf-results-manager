@@ -39,6 +39,8 @@ class GrandPrix {
         $this->standings_table = $wpdb->prefix . 'pausatf_grand_prix_standings';
 
         add_shortcode('pausatf_grand_prix', [$this, 'shortcode_standings']);
+        // Importers fire pausatf_results_imported; pausatf_result_imported stays for sites that fire it themselves.
+        add_action('pausatf_results_imported', [$this, 'update_standings_for_event'], 10, 2);
         add_action('pausatf_result_imported', [$this, 'update_standings_for_event'], 10, 2);
         add_action('admin_init', [self::class, 'maybe_upgrade']);
     }

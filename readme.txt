@@ -67,6 +67,7 @@ Schema changes run on the first wp-admin page load and delete nothing. Read docs
 * Placement time follows the event's stated gun, net or combination basis, gun by default. Official times round up to the next whole second.
 * The Sanctions Manager is retired. Its data is kept.
 * Age grading uses one implementation and a factor table imported with WP-CLI. Rankings stay off without a table.
+* Grand Prix standings recompute after every import, and the result, athlete-claim and ranking webhooks are sent.
 * Cross country team scoring follows the PA Cross Country Rules (3/1/26).
 * Athlete identity resolves through PAUSATF Site's Archive, with a fallback.
 * Grand Prix standings for the PA 2026 road, cross country and MUT rules, with a `ruleset` column on series.

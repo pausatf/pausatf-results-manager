@@ -423,9 +423,11 @@ class RankingSystem {
         $results = [];
 
         foreach ($events as $event) {
+            $ranked = 0;
             foreach ($genders as $gender) {
                 if (AgeGrading::rankings_enabled()) {
                     $count = $this->generate_age_graded_rankings($event, $gender, $season);
+                    $ranked += $count;
                     $results[] = "Age-graded {$event} {$gender}: {$count} ranked";
                 }
 
@@ -438,11 +440,15 @@ class RankingSystem {
                     }
 
                     $count = $this->generate_rankings($event, $gender, $division, $season);
+                    $ranked += $count;
                     if ($count > 0) {
                         $results[] = "{$event} {$gender} {$division}: {$count} ranked";
                     }
                 }
             }
+
+            // The count is ranking rows written for the event; an athlete can rank in OPEN and a masters list.
+            do_action('pausatf_rankings_updated', $event, $ranked);
         }
 
         return $results;

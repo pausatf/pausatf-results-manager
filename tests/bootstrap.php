@@ -30,7 +30,9 @@ if (!function_exists('apply_filters')) {
 }
 
 if (!function_exists('add_action')) {
-    function add_action(...$args): void {
+    // Records listeners in $GLOBALS['pausatf_test_hooks'][$hook]; nothing dispatches them unless a test does.
+    function add_action(string $hook, $callback, int $priority = 10, int $accepted_args = 1): void {
+        $GLOBALS['pausatf_test_hooks'][$hook][] = [$callback, $accepted_args];
     }
 }
 

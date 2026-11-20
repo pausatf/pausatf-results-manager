@@ -37,6 +37,7 @@ Changes on `main` since 2.4.0, in merge order.
 
 ### Fixed
 
+- Grand Prix standings now recompute after every import. RM's importers fire `pausatf_results_imported` once per event after storing its results, and Grand Prix listens for it as well as `pausatf_result_imported`. Approving an athlete claim fires `pausatf_athlete_claimed`, and **Regenerate All Rankings** fires `pausatf_rankings_updated` once per event, so the `result.created`, `athlete.claimed` and `ranking.updated` webhooks are sent. See [docs/reference.md](docs/reference.md#actions).
 - Placeholder age factors and an age-graded percentage that ignored the factor. (#115)
 - XC club team standings that depended on an unspecified MySQL variable ordering. (#116)
 

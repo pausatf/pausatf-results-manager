@@ -94,7 +94,7 @@ Other data RM expects from the site or its imports:
 - Club names spelled consistently. RM compares clubs by a lowercase, space-normalized name and ignores `unattached`, `unatt`, `ua`, `none`, `n/a` and `-`.
 - PAUSATF Site's Archive, for verified athlete identity. See [athlete-identity.md](athlete-identity.md).
 - Optional: `_pausatf_placement_time` on events, and a callback for `pausatf_results_placement_time_combination` if events use a stated combination.
-- A call to `GrandPrix::calculate_standings()` or the `pausatf_result_imported` action after imports.
+- Nothing after imports: RM's importers now fire `pausatf_results_imported`, which recomputes the event's series. A site that already fires `pausatf_result_imported` after RM imports can stop; leaving it in place recomputes the same series twice.
 
 ## Archive deferral
 

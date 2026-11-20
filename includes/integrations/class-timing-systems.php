@@ -211,6 +211,7 @@ class ChronoTrackClient implements TimingSystemInterface {
         }
 
         update_post_meta($event_id, '_pausatf_result_count', $imported);
+        do_action('pausatf_results_imported', $event_id, $imported);
         return $imported;
     }
 
@@ -342,6 +343,7 @@ class MYLAPSClient implements TimingSystemInterface {
         }
 
         update_post_meta($event_id, '_pausatf_result_count', $imported);
+        do_action('pausatf_results_imported', $event_id, $imported);
         return $imported;
     }
 
@@ -442,6 +444,7 @@ class WebscorerClient implements TimingSystemInterface {
         }
 
         update_post_meta($event_id, '_pausatf_result_count', $imported);
+        do_action('pausatf_results_imported', $event_id, $imported);
 
         return [
             'success' => true,
