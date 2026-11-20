@@ -9,6 +9,8 @@
 
 namespace PAUSATF\Results\Integrations;
 
+use PAUSATF\Results\PlacementTime;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -182,8 +184,15 @@ class ChronoTrackClient implements TimingSystemInterface {
         global $wpdb;
         $table = $wpdb->prefix . 'pausatf_results';
         $imported = 0;
+        $basis = PlacementTime::basis($event_id);
 
         foreach ($results as $result) {
+            [$seconds, $used] = PlacementTime::choose(
+                isset($result['gunTimeSeconds']) ? (float) $result['gunTimeSeconds'] : null,
+                isset($result['chipTimeSeconds']) ? (float) $result['chipTimeSeconds'] : null,
+                $basis,
+                $result
+            );
             $data = [
                 'event_id' => $event_id,
                 'athlete_name' => trim(($result['firstName'] ?? '') . ' ' . ($result['lastName'] ?? '')),
@@ -191,8 +200,8 @@ class ChronoTrackClient implements TimingSystemInterface {
                 'place' => $result['overallPlace'] ?? null,
                 'division' => $result['division'] ?? null,
                 'division_place' => $result['divisionPlace'] ?? null,
-                'time_seconds' => $result['chipTimeSeconds'] ?? $result['gunTimeSeconds'] ?? null,
-                'time_display' => $result['chipTime'] ?? $result['gunTime'] ?? '',
+                'time_seconds' => PlacementTime::official_seconds($seconds),
+                'time_display' => (string) (($used === PlacementTime::NET ? $result['chipTime'] ?? null : $result['gunTime'] ?? null) ?? ''),
                 'raw_data' => json_encode($result),
             ];
 
@@ -322,7 +331,7 @@ class MYLAPSClient implements TimingSystemInterface {
                 'athlete_name' => $result['participantName'] ?? '',
                 'bib' => $result['startNumber'] ?? null,
                 'place' => $result['position'] ?? null,
-                'time_seconds' => isset($result['finishTimeMs']) ? (int) ($result['finishTimeMs'] / 1000) : null,
+                'time_seconds' => isset($result['finishTimeMs']) ? PlacementTime::official_seconds($result['finishTimeMs'] / 1000) : null,
                 'time_display' => $result['finishTime'] ?? '',
                 'raw_data' => json_encode($result),
             ];

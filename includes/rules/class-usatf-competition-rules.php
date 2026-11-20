@@ -63,10 +63,14 @@ class USATFCompetitionRules {
             'precision' => 0.1, // seconds (tenths)
             'conversion_to_fat' => 0.24, // add for 100m-400m comparison
         ],
+        // 2026 USATF Competition Rules, Rule 165.16 (p. 72-76): the Games Committee states
+        // gun, net or a combination in the entry materials; gun time otherwise (165.4).
+        // Record claims use gun time except Masters records (265.8). See PlacementTime.
         'road_racing' => [
-            'gun_time' => 'official_for_records',
-            'chip_time' => 'official_for_placement',
-            'precision' => 1, // seconds
+            'placement_basis' => ['gun', 'net', 'combination'],
+            'default_basis' => 'gun',
+            'records' => 'gun_time_except_masters',
+            'precision' => 1, // seconds, rounded up (165.11(c))
         ],
     ];
 

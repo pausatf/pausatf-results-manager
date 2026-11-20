@@ -394,6 +394,7 @@ final class Plugin {
         require_once PAUSATF_RESULTS_DIR . 'includes/class-event-date.php';
         EventDate::register();
         require_once PAUSATF_RESULTS_DIR . 'includes/class-listed-sex.php';
+        require_once PAUSATF_RESULTS_DIR . 'includes/class-placement-time.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-results-importer.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/storage/class-results-repository.php';
         require_once PAUSATF_RESULTS_DIR . 'includes/class-canonical-event-service.php';
