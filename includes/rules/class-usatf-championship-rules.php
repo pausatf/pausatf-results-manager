@@ -13,6 +13,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once __DIR__ . '/class-usatf-competition-rules.php';
+
 /**
  * Championship-specific rules
  */
@@ -97,8 +99,8 @@ class USATFChampionshipRules {
                 // Rule 265.4: point-to-point courses qualify within these limits.
                 'loop_course' => true,
                 'point_to_point' => true,
-                'max_drop' => 1.0, // meter per km
-                'max_separation' => 50, // percent of distance
+                'max_drop' => USATFCompetitionRules::ROAD_RECORD_MAX_DROP_PER_KM, // meter per km
+                'max_separation' => (int) (USATFCompetitionRules::ROAD_RECORD_MAX_SEPARATION * 100), // percent of distance
             ],
         ],
         'team_scoring' => [
