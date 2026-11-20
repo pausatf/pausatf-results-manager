@@ -43,7 +43,7 @@ All screens need `manage_options`, except the Race Director Portal.
 | Screen | Where | What it does |
 | --- | --- | --- |
 | Dashboard | **PAUSATF Results** | Event, athlete and result counts, quick links and recent imports. |
-| Import | **PAUSATF Results > Import** | Import one page by URL, analyze a URL's format, queue a batch import for a year from 1994 to 2025, and see the next scheduled sync. The "Upload HTML File" form has no handler behind it in this release. |
+| Import | **PAUSATF Results > Import** | Import one page by URL, analyze a URL's format, queue a batch import for a year from 1994 to 2025, upload one `.html` or `.htm` results page (up to 10 MB), and see the next scheduled sync. An upload goes through the same parsers as a URL import (`ResultsImporter::import_from_html()`); it is parsed from PHP's temporary file and not kept. |
 | Settings | **PAUSATF Results > Settings** | Four tabs, below. |
 | RDF/SPARQL | **PAUSATF Results > RDF/SPARQL** | Endpoint list, query form, export links and documentation. RDF feature only. |
 | Webhooks | **PAUSATF Results > Webhooks** | List registered webhooks, add one, and see the selectable events. Deliveries are logged in `pausatf_webhook_logs`. Webhooks feature only. |
@@ -71,7 +71,7 @@ Settings tabs:
 
 | Path | Entry point | Stores through | Notes |
 | --- | --- | --- | --- |
-| Legacy HTML by URL | Import screen, `POST /pausatf/v1/import`, the sync | `ResultsImporter` | Detects table, fixed-width and Word-generated HTML. Replaces the event's existing results. |
+| Legacy HTML by URL or upload | Import screen (URL or file), `POST /pausatf/v1/import`, the sync | `ResultsImporter` | Detects table, fixed-width and Word-generated HTML. Replaces the event's existing results. |
 | Scheduled sync and batch | `pausatf_results_sync`, `pausatf_batch_import` | `ResultsImporter` | Reads the file listing at `PAUSATF_LEGACY_SOURCE_URL`. |
 | Canonical event JSON | `POST /pausatf/v1/events/import`, the calendar command | `CanonicalEventService`, then `ResultsRepository` | Creates or updates the event by `event_uid`. Links athletes by source identifier. Sets PAUSATF Site's start, timezone and state keys when that module is loaded. |
 | CSV, Hy-Tek | Race Director Portal; code | `CSVImporter`, `HyTekImporter` | |
