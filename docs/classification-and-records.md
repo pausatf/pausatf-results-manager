@@ -18,7 +18,7 @@ Rule 141.1 defines four classifications. RM applies the age tests per discipline
 | Open | 141.1(a) | No maximum age. 14 or older on the day of competition for track and field and race walking; 16 or older for cross country and long distance running (LDR). | `track_field` and `race_walk` 14; `road`, `cross_country` and `mut` 16 |
 | U20 | 141.1(b) | 14 or older on the day of competition and not turning 20 during the competition year. | `USATFAgeDivisions::is_u20()` |
 | Youth | 141.1(c) | Has not reached 19 by the final day of the National Junior Olympic track and field meet of the competition year. This is not the World Athletics U18 definition. | See "Youth divisions" below |
-| Masters | 141.1(d) | Track and field and race walking: 35 or older on the first day of the meet. LDR: 40 or older on the first day of the meet. USATF's LDR masters age differs from WMA and World Athletics. | `track_field` and `race_walk` 35; `road`, `cross_country` and `mut` 40 |
+| Masters | 141.1(d) | Track and field and race walking: 35 or older on the first day of the meet. LDR: 40 or older; Masters long distance running takes the age on race day (Rule 341.4). USATF's LDR masters age differs from WMA and World Athletics. | `track_field` and `race_walk` 35; `road`, `cross_country` and `mut` 40 |
 
 Rule 141.3 sets minimum ages for long events: 16 for events longer than the half marathon or one hour, and 18 for events longer than the marathon or two hours. `USATFAgeDivisions::minimum_age_for_event($distance_m, $duration_s)` returns 16, 18 or null. It reports the minimum; nothing in the importers rejects an entry for being under it.
 

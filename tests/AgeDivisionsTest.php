@@ -124,7 +124,12 @@ class AgeDivisionsTest extends TestCase {
         self::assertSame('year_of_birth', USATFAgeDivisions::get_age_determination_rule(2024, 'youth'));
         self::assertSame('competition_day', USATFAgeDivisions::get_age_determination_rule(2024, 'open'));
         self::assertSame('first_day_of_meet', USATFAgeDivisions::get_age_determination_rule(2024, 'masters'));
-        self::assertSame('first_day_of_meet', USATFAgeDivisions::get_age_determination_rule(2024, 'masters_ldr'));
+        // Rule 341.4: Masters long distance running takes age on race day.
+        self::assertSame('competition_day', USATFAgeDivisions::get_age_determination_rule(2024, 'masters_ldr'));
+        foreach (['road', 'cross_country', 'mut'] as $discipline) {
+            self::assertSame('competition_day', USATFAgeDivisions::AGE_RULES[$discipline]['masters_age_on'], $discipline);
+        }
+        self::assertSame('first_day_of_meet', USATFAgeDivisions::AGE_RULES['track_field']['masters_age_on']);
         self::assertSame('competition_day', USATFAgeDivisions::get_age_determination_rule(2024));
     }
 }

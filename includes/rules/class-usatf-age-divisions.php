@@ -40,16 +40,18 @@ class USATFAgeDivisions {
      * - open_min: Rule 141.1(a), 14 on the day of competition for track & field and race
      *   walking, 16 for cross country and long distance running.
      * - masters_min: Rule 141.1(d), 35 for track & field and race walking, 40 for long
-     *   distance running, on the first day of the meet.
+     *   distance running. Track & field and race walking take masters age on the first day
+     *   of the meet (141.1(d), 320.4); Masters long distance running takes it on race day
+     *   (Rule 341.4, p. 193).
      * - open_age_on / masters_age_on: the date age is taken on (141.1(a), 141.1(d), 320.4).
      * - youth_age_on: Rule 300.1(b), the age reached by December 31 of the competition year.
      */
     public const AGE_RULES = [
         'track_field' => ['open_min' => 14, 'masters_min' => 35, 'open_age_on' => 'competition_day', 'masters_age_on' => 'first_day_of_meet', 'youth_age_on' => 'year_of_birth'],
         'race_walk' => ['open_min' => 14, 'masters_min' => 35, 'open_age_on' => 'competition_day', 'masters_age_on' => 'first_day_of_meet', 'youth_age_on' => 'year_of_birth'],
-        'road' => ['open_min' => 16, 'masters_min' => 40, 'open_age_on' => 'competition_day', 'masters_age_on' => 'first_day_of_meet', 'youth_age_on' => 'year_of_birth'],
-        'cross_country' => ['open_min' => 16, 'masters_min' => 40, 'open_age_on' => 'competition_day', 'masters_age_on' => 'first_day_of_meet', 'youth_age_on' => 'year_of_birth'],
-        'mut' => ['open_min' => 16, 'masters_min' => 40, 'open_age_on' => 'competition_day', 'masters_age_on' => 'first_day_of_meet', 'youth_age_on' => 'year_of_birth'],
+        'road' => ['open_min' => 16, 'masters_min' => 40, 'open_age_on' => 'competition_day', 'masters_age_on' => 'competition_day', 'youth_age_on' => 'year_of_birth'],
+        'cross_country' => ['open_min' => 16, 'masters_min' => 40, 'open_age_on' => 'competition_day', 'masters_age_on' => 'competition_day', 'youth_age_on' => 'year_of_birth'],
+        'mut' => ['open_min' => 16, 'masters_min' => 40, 'open_age_on' => 'competition_day', 'masters_age_on' => 'competition_day', 'youth_age_on' => 'year_of_birth'],
     ];
 
     /** Rule 141.3: minimum ages for events longer than the half marathon and the marathon. */
@@ -271,14 +273,15 @@ class USATFAgeDivisions {
     /**
      * How age is determined, by context:
      * - open / U20: age on the day of competition (Rule 141.1(a)-(b))
-     * - masters (track & field, race walk) and masters_ldr: age on the first day of the meet
-     *   (Rule 141.1(d), 320.4)
+     * - masters (track & field, race walk): age on the first day of the meet (Rule 141.1(d), 320.4)
+     * - masters_ldr: age on race day (Rule 341.4)
      * - youth: year of birth (300.1(b))
      */
     public static function get_age_determination_rule(int $year, string $context = 'open'): string {
         return match ($context) {
             'youth' => 'year_of_birth',
-            'masters', 'masters_ldr' => 'first_day_of_meet',
+            'masters' => 'first_day_of_meet',
+            'masters_ldr' => 'competition_day',
             default => 'competition_day',
         };
     }
