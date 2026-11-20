@@ -59,6 +59,10 @@ WordPress plugin to import, manage, and display PAUSATF (Pacific Association USA
 - WordPress 6.0+
 - PHP 8.4+ (Composer requirement and CI runtime)
 
+## Upgrade notes
+
+- **Sanctions Manager retired.** USATF takes sanction applications online at usatf.org (2026 USATF Governance Handbook, Regulation 23-C), so this plugin no longer loads the Sanctions Manager: no admin page, AJAX or REST routes, public forms, fee table or reminder cron. Pages that still contain `[pausatf_sanction_form]`, `[pausatf_my_sanctions]` or `[pausatf_sanctioned_events]` show a short notice linking to PA's sanctions page; the `pausatf_results_sanctions_url` filter changes the link. Existing sanction records are not touched. See [docs/sanctions-retirement.md](docs/sanctions-retirement.md) to export or remove them.
+
 ## Usage
 
 For immutable archive candidates, independent verification and explicit publication, see the [archive context operator guide](docs/archive-context.md). Archive tables require explicit installation; this workflow preserves existing results tables.

@@ -30,7 +30,6 @@
             "PAUSATF\\Results\\Contracts\\": "includes/contracts/",
             "PAUSATF\\Results\\Models\\": "includes/models/",
             "PAUSATF\\Results\\Parsers\\": "includes/parsers/",
-            "PAUSATF\\Results\\Sanctions\\": "includes/sanctions/",
             "PAUSATF\\Results\\Storage\\": "includes/storage/",
             "PAUSATF\\Results\\Rules\\": "includes/rules/",
             "PAUSATF\\Results\\Integrations\\": "includes/integrations/"
