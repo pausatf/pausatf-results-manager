@@ -368,10 +368,16 @@ final class Plugin {
         require_once PAUSATF_RESULTS_DIR . 'includes/parsers/class-parser-word.php';
 
         // Archive candidates use their own review and publication boundary.
-        foreach (['bundle', 'review', 'database', 'schema', 'workflow', 'view', 'cli', 'module'] as $component) {
-            require_once PAUSATF_RESULTS_DIR . 'includes/archive/class-archive-' . $component . '.php';
+        // PAUSATF Site's Archive owns the admin menu, handler, REST routes,
+        // shortcode, and CLI when it is active, so none of them load here.
+        // The code stays until production runs PAUSATF Site.
+        require_once PAUSATF_RESULTS_DIR . 'includes/archive/class-archive-ownership.php';
+        if (!Archive\ArchiveOwnership::site_provides()) {
+            foreach (['bundle', 'review', 'database', 'schema', 'workflow', 'view', 'cli', 'module'] as $component) {
+                require_once PAUSATF_RESULTS_DIR . 'includes/archive/class-archive-' . $component . '.php';
+            }
+            Archive\ArchiveModule::register();
         }
-        Archive\ArchiveModule::register();
 
         // Load USATF rules engine (conditionally)
         if (FeatureManager::is_enabled('usatf_rules_engine')) {
