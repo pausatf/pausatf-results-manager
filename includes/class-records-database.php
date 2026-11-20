@@ -457,6 +457,9 @@ class RecordsDatabase {
             // Notify about new record
             $this->notify_new_record($new_record_id, $record_data);
 
+            /** Fires once a pending record is approved and stored (record ID, record data, pending record ID). */
+            do_action('pausatf_record_approved', $new_record_id, $record_data, $pending_id);
+
             return true;
 
         } catch (\Exception $e) {

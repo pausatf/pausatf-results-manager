@@ -166,7 +166,8 @@ Settings tools, which require `manage_options` and the `pausatf_ajax` nonce: `pa
 | Action | Arguments | Fired when |
 | --- | --- | --- |
 | `pausatf_results_age_grading_imported` | edition | An age-grading table is stored. |
-| `pausatf_new_record` | record ID, record data | A record is approved. |
+| `pausatf_new_record` | record ID, record data | A record is approved. Webhooks send `record.created`. |
+| `pausatf_record_approved` | record ID, record data, pending record ID | `RecordsDatabase::approve_record()` stores an approved record, after `pausatf_new_record`. Webhooks send `record.approved`. Nothing in RM's admin screens calls `approve_record()` yet, so the event fires only when site code does. |
 | `pausatf_results_imported` | event ID, count | Once per event, after any RM importer stores that event's results (count is the rows stored). An Athlinks sync fires once for each event it added rows to. Grand Prix recomputes on it and webhooks send `result.created`. |
 | `pausatf_athlete_claimed` | athlete ID, user ID | `AthleteClaim::approve_claim()` links an athlete profile to a user, by admin approval or automatic verification. Webhooks send `athlete.claimed`. |
 | `pausatf_rankings_updated` | event, count | **Regenerate All Rankings**, once for each ranked event (5K to Marathon). The count is ranking rows written for that event across sexes and divisions, so an athlete in both an open and a masters list counts twice. Webhooks send `ranking.updated`. |
@@ -183,4 +184,4 @@ Settings tools, which require `manage_options` and the `pausatf_ajax` nonce: `pa
 | --- | --- | --- |
 | `pausatf_result_imported` (event ID, count) | Grand Prix | Recomputes every series containing the event. RM fires the plural `pausatf_results_imported` instead; this one is for site code that wants a recompute. |
 
-Webhooks do send `event.created` and `event.updated` (on `save_post_pausatf_event`) and `record.created` (on `pausatf_new_record`). The events `result.updated` and `record.approved` can be selected in the admin screen, but nothing triggers them. Webhook payloads are signed with HMAC-SHA256 in the `X-PAUSATF-Signature` header (`sha256=<hex>`), with `X-PAUSATF-Event` and `X-PAUSATF-Delivery` headers.
+Webhooks do send `event.created` and `event.updated` (on `save_post_pausatf_event`) and `record.created` (on `pausatf_new_record`). `record.approved` is sent on `pausatf_record_approved`. There is no `result.updated` event: RM has no flow that edits a stored result row, and a re-import replaces the event's rows and sends `result.created`. Webhook payloads are signed with HMAC-SHA256 in the `X-PAUSATF-Signature` header (`sha256=<hex>`), with `X-PAUSATF-Event` and `X-PAUSATF-Delivery` headers.

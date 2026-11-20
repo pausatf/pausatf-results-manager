@@ -22,7 +22,6 @@ class Webhooks {
      */
     public const EVENTS = [
         'result.created' => 'When new results are imported',
-        'result.updated' => 'When results are modified',
         'event.created' => 'When a new event is created',
         'event.updated' => 'When an event is modified',
         'record.created' => 'When a new record is set',
@@ -50,6 +49,7 @@ class Webhooks {
         add_action('pausatf_results_imported', [$this, 'on_results_imported'], 10, 2);
         add_action('save_post_pausatf_event', [$this, 'on_event_saved'], 10, 3);
         add_action('pausatf_new_record', [$this, 'on_new_record'], 10, 2);
+        add_action('pausatf_record_approved', [$this, 'on_record_approved'], 10, 3);
         add_action('pausatf_athlete_claimed', [$this, 'on_athlete_claimed'], 10, 2);
         add_action('pausatf_rankings_updated', [$this, 'on_rankings_updated'], 10, 2);
 
@@ -419,6 +419,19 @@ class Webhooks {
             'performance' => $record['performance_display'],
             'athlete_name' => $record['athlete_name'],
             'record_date' => $record['record_date'],
+        ]);
+    }
+
+    public function on_record_approved(int $record_id, array $record, int $pending_id): void {
+        $this->trigger('record.approved', [
+            'record_id' => $record_id,
+            'pending_id' => $pending_id,
+            'event' => $record['event'],
+            'division' => $record['division_code'],
+            'performance' => $record['performance_display'],
+            'athlete_name' => $record['athlete_name'],
+            'record_date' => $record['record_date'],
+            'verified_by' => (int) $record['verified_by'],
         ]);
     }
 
