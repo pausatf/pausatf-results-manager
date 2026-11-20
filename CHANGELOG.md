@@ -7,6 +7,7 @@ This file follows the [Keep a Changelog](https://keepachangelog.com/) layout. Pu
 ### Fixed
 
 - **Clear All Caches** deleted every `pausatf_` transient, including PAUSATF Site's. It now deletes only RM's (`pausatf_usatf_*` and `pausatf_cert_gen_*`), the same list Delete All Data uses.
+- The records scan uses a result's stored sex (`sex_listed`, then `sex`, through `ListedSex::category()`) instead of the division label. A listed sex other than M or F is never matched against men's or women's records; only legacy rows with no stored sex fall back to the label.
 
 ## 2.5.0 - 2026-11-20
 

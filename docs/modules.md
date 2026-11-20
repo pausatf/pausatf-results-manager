@@ -59,7 +59,7 @@ Settings tabs:
 - **Tools.** Bulk operations and maintenance:
   - Create Missing Athlete Profiles for names that meet the minimum event count.
   - Re-parse All Events marks completed import-log rows as pending so the sync can pick them up. It does not download anything itself.
-  - Scan All Results for Potential Records, which queues pending records for review.
+  - Scan All Results for Potential Records, which queues pending records for review. It uses each result's stored sex and skips results with no M or F category (see [classification-and-records.md](classification-and-records.md)).
   - Regenerate All Rankings rebuilds every event, sex and division for the current year.
   - Repair Database Tables re-runs the table installers for enabled features.
   - Clear All Caches deletes RM's own transients (`pausatf_usatf_*` and `pausatf_cert_gen_*`) and flushes the `pausatf_results` object cache group. Transients with other `pausatf_` prefixes belong to PAUSATF Site and are kept.
