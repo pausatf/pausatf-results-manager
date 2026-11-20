@@ -10,7 +10,6 @@ parameters:
         - node_modules
         - tests
         # PHP 8.4 Property Hooks not yet supported by PHPStan parser
-        - includes/sanctions/class-sanction.php
         - includes/models/class-athlete-result.php
     phpVersion: 80400
     treatPhpDocTypesAsCertain: false
