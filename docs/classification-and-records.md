@@ -79,6 +79,8 @@ The default of gun time is stated in the code as Rule 165.4. The verified readin
 
 A record claim uses gun time, except Masters records (Rules 165.16(c) and 265.8). Rule 265.8 allows rounded transponder net times for American Masters LDR records when the athlete wins the division (Rule 320 age groups from 40) and the start and end mats are fully outside the start and finish. `USATFCompetitionRules` holds this as data under its road racing timing entry. The records workflow does not read it: RM's record checks compare the performance it is given and do not pick a time basis.
 
+The Scan All Results for Potential Records tool reads each result's sex through `ListedSex::category()`, from `sex_listed` when it is set and otherwise `sex`. A result with a listed sex other than M or F, or a scoring category of null, is skipped; it is never matched against men's or women's records. Only legacy rows with neither column filled fall back to an explicit M or W label in the division.
+
 ## Road record courses (Rule 265.4)
 
 For a road performance to count as a record, Rule 265.4 requires:

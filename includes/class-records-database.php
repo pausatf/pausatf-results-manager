@@ -530,8 +530,8 @@ class RecordsDatabase {
                 continue;
             }
 
-            // Determine gender from division or name
-            $gender = $this->infer_gender($result);
+            // Stored sex first; the division label only for rows that predate it
+            $gender = self::infer_gender($result);
             if (!$gender) continue;
 
             // Get the specific event (distance) from event post
@@ -577,10 +577,24 @@ class RecordsDatabase {
     }
 
     /**
-     * Infer gender from result data
+     * Scoring sex of a stored result: M, F, or null when it has none.
+     *
+     * The stored value decides when there is one. A result whose sex is listed but is not
+     * M or F (X, NB) has no men's or women's record to compete for, so it never falls back
+     * to the division label. Only legacy rows with no stored sex are read from the label.
      */
-    private function infer_gender(array $result): ?string {
-        $division = $result['division'] ?? '';
+    public static function infer_gender(array $result): ?string {
+        $listed = trim((string) ($result['sex_listed'] ?? ''));
+        if ($listed !== '') {
+            return ListedSex::category($listed);
+        }
+
+        $stored = trim((string) ($result['sex'] ?? ''));
+        if ($stored !== '') {
+            return ListedSex::category($stored);
+        }
+
+        $division = (string) ($result['division'] ?? '');
 
         if (preg_match('/^[WF]/i', $division) || strpos(strtolower($division), 'women') !== false) {
             return 'F';
