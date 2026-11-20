@@ -34,7 +34,7 @@ mise exec node@22.22.2 -- npm run test:unit
 
 At the time of writing, a local run without MySQL reports 389 tests and 36 skipped. Counts change with every merge; read the result, not this number.
 
-The suites that cover the rules in these docs: `AgeDivisionsTest`, `ListedSexTest`, `EventDateTest`, `PlacementTimeTest`, `RoadRecordCourseTest`, `AgeGradingTest`, `AgeGradedRankingsTest`, `AthleteIdentityTest`, `GrandPrixRulesTest`, `GrandPrixScoringTest`, `GrandPrixStandingsTest`, `XCTeamScoringTest`, `SanctionsRetirementTest` and `ArchiveOwnershipTest`.
+The suites that cover the rules in these docs: `AgeDivisionsTest`, `ListedSexTest`, `ImporterListedSexTest`, `EventDateTest`, `PlacementTimeTest`, `RoadRecordCourseTest`, `AgeGradingTest`, `AgeGradedRankingsTest`, `AthleteIdentityTest`, `GrandPrixRulesTest`, `GrandPrixScoringTest`, `GrandPrixStandingsTest`, `XCTeamScoringTest`, `SanctionsRetirementTest` and `ArchiveOwnershipTest`.
 
 ## Pre-push hook
 

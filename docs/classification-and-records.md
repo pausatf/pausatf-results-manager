@@ -44,15 +44,19 @@ Rule 141.2 limits the female category to athletes of female reproductive biology
 
 The `sex_listed` column arrives through the results schema upgrade (see [upgrading.md](upgrading.md)). Until the `pausatf_results_schema` option reaches 1, writers skip `sex_listed` and write only `sex`.
 
-Which importers apply this today:
+Every importer writes both columns through `ListedSex`, and none of them changes the printed value:
 
-| Path | Writes `sex` and `sex_listed` through `ListedSex` |
+| Path | Where the listed value comes from |
 | --- | --- |
-| Canonical event import (`POST /pausatf/v1/events/import`, and the `pausatf import-2026-calendars` command) through `ResultsRepository` | Yes |
-| UltraSignUp importer | Yes |
-| Admin URL import, scheduled sync, batch import and `POST /pausatf/v1/import` (`ResultsImporter`) | No. The parsers read sex, but the importer does not store it. |
-| CSV importer | Writes the printed value to the one-character `sex` column without mapping; `sex_listed` is not written |
-| Hy-Tek, RunSignUp, Athlinks and timing system importers | No |
+| Admin URL import, scheduled sync, batch import, `POST /pausatf/v1/import` and Race Director HTML uploads (`ResultsImporter`) | The table parser's Sex, Gender or M/F column; for fixed-width pages, the letter printed before the division (`W40-44` gives `W`) |
+| Canonical event import (`POST /pausatf/v1/events/import`, and the `pausatf import-2026-calendars` command) through `ResultsRepository` | Each result's `sex` |
+| CSV importer | The Sex, Gender, M/F or MF column |
+| Hy-Tek | The athlete record's one-character sex code |
+| RunSignUp | The result's user `gender`, then the result's `gender` |
+| Athlinks, ChronoTrack, MYLAPS, Webscorer | The result's `gender` |
+| UltraSignUp | The Gender or Sex column |
+
+`USATFAgeDivisions::scoring_sex()` returns `ListedSex::category()`, so division lookups accept the same forms.
 
 Where `sex` is null, Grand Prix standings fall back to an explicit sex in the division label, such as M40 or Women 50. A bare Open label does not decide sex.
 

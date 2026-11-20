@@ -9,6 +9,7 @@
 
 namespace PAUSATF\Results\Integrations;
 
+use PAUSATF\Results\ListedSex;
 use PAUSATF\Results\PlacementTime;
 
 if (!defined('ABSPATH')) {
@@ -203,7 +204,7 @@ class ChronoTrackClient implements TimingSystemInterface {
                 'time_seconds' => PlacementTime::official_seconds($seconds),
                 'time_display' => (string) (($used === PlacementTime::NET ? $result['chipTime'] ?? null : $result['gunTime'] ?? null) ?? ''),
                 'raw_data' => json_encode($result),
-            ];
+            ] + ListedSex::columns($result['gender'] ?? null);
 
             if ($wpdb->insert($table, $data)) {
                 $imported++;
@@ -335,7 +336,7 @@ class MYLAPSClient implements TimingSystemInterface {
                 'time_seconds' => isset($result['finishTimeMs']) ? PlacementTime::official_seconds($result['finishTimeMs'] / 1000) : null,
                 'time_display' => $result['finishTime'] ?? '',
                 'raw_data' => json_encode($result),
-            ];
+            ] + ListedSex::columns($result['gender'] ?? null);
 
             if ($wpdb->insert($table, $data)) {
                 $imported++;
@@ -438,7 +439,7 @@ class WebscorerClient implements TimingSystemInterface {
                 'place' => $result['place'] ?? null,
                 'time_display' => $result['time'] ?? '',
                 'raw_data' => json_encode($result),
-            ])) {
+            ] + ListedSex::columns($result['gender'] ?? null))) {
                 $imported++;
             }
         }

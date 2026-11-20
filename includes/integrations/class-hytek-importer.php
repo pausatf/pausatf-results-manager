@@ -9,6 +9,8 @@
 
 namespace PAUSATF\Results\Integrations;
 
+use PAUSATF\Results\ListedSex;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -355,6 +357,7 @@ class HyTekImporter {
                 'division' => $this->determine_division($athlete),
                 'raw_data' => json_encode($result),
             ];
+            $data += ListedSex::columns($athlete['gender'] ?? null);
 
             if ($wpdb->insert($table, $data)) {
                 $imported++;

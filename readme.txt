@@ -63,6 +63,7 @@ Schema changes run on the first wp-admin page load and delete nothing. Read docs
 * TLS certificates are verified on every outbound request, including the sync and batch directory listings and the Import screen's Analyze request, which the 2.2.0 entry did not cover.
 * Age divisions follow Rules 141 and 320 per discipline; U20 is a date test.
 * Sex is stored as listed in a new `sex_listed` column; unknown values are never scored as men.
+* Every importer now stores sex as listed, including the HTML, CSV, Hy-Tek, RunSignUp, Athlinks and timing system importers.
 * Road record course limits (Rule 265.4) are available as a helper.
 * Placement time follows the event's stated gun, net or combination basis, gun by default. Official times round up to the next whole second.
 * The Sanctions Manager is retired. Its data is kept.

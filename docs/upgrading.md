@@ -37,7 +37,7 @@ RM now takes an event's competition date from `_pausatf_event_start` (PAUSATF Si
 
 ### Sex as listed
 
-Earlier releases stored only the first letter of the listed sex and dropped other values. Now `sex_listed` keeps the printed value and `sex` holds the scoring category: M, F, or null. Rows imported earlier keep their stored `sex`, and their `sex_listed` is null; the printed value cannot be recovered without re-importing from the source. A result whose sex is not M or F is shown and not scored. RM's age-division, event-standard and Grand Prix code no longer treat it as male. Which importers write the new column is in [classification-and-records.md](classification-and-records.md#sex-as-listed): the legacy HTML importer and several integrations do not store sex, so those results have a null `sex`.
+Earlier releases stored only the first letter of the listed sex and dropped other values. Now `sex_listed` keeps the printed value and `sex` holds the scoring category: M, F, or null. Rows imported earlier keep their stored `sex`, and their `sex_listed` is null; the printed value cannot be recovered without re-importing from the source. A result whose sex is not M or F is shown and not scored. RM's age-division, event-standard and Grand Prix code no longer treat it as male. Every importer now writes both columns (see [classification-and-records.md](classification-and-records.md#sex-as-listed)). Before this, the legacy HTML importer, Hy-Tek, RunSignUp, Athlinks and the timing system importers stored no sex, and the CSV importer wrote the printed value unmapped into `sex`. Re-import those events to fill `sex` and `sex_listed`; results that stay null are not scored.
 
 ### Age divisions and classifications
 

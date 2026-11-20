@@ -10,9 +10,13 @@
 
 namespace PAUSATF\Results\Rules;
 
+use PAUSATF\Results\ListedSex;
+
 if (!defined('ABSPATH')) {
     exit;
 }
+
+require_once dirname(__DIR__) . '/class-listed-sex.php';
 
 /**
  * USATF Age Division definitions by year
@@ -130,16 +134,12 @@ class USATFAgeDivisions {
     }
 
     /**
-     * The category a listed sex is scored in: M, or F for a listed F or W. Anything else
-     * (unknown, non-binary, X, blank) has no USATF scoring category and returns null; it is
-     * never folded into the men's category.
+     * The category a listed sex is scored in, as ListedSex::category() maps it: M or F, or
+     * null for anything else (unknown, non-binary, X, blank), which is never folded into
+     * the men's category.
      */
     public static function scoring_sex(?string $sex): ?string {
-        return match (strtoupper(trim((string) $sex))) {
-            'M' => 'M',
-            'F', 'W' => 'F',
-            default => null,
-        };
+        return ListedSex::category($sex);
     }
 
     /**
