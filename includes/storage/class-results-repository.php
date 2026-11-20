@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace PAUSATF\Results\Storage;
 
+use PAUSATF\Results\EventDate;
 use PAUSATF\Results\Parsers\ParsedResults;
 
 if (!defined('ABSPATH')) {
@@ -269,11 +270,10 @@ class ResultsRepository {
         if (!empty($parsed->event_name) && !empty($parsed->event_date)) {
             $existing = $wpdb->get_var($wpdb->prepare(
                 "SELECT p.ID FROM {$wpdb->posts} p
-                 INNER JOIN {$wpdb->postmeta} m ON p.ID = m.post_id
+                 " . EventDate::sql_join('p.ID', 'm') . "
                  WHERE p.post_type = 'pausatf_event'
                  AND p.post_title = %s
-                 AND m.meta_key = '_pausatf_event_date'
-                 AND m.meta_value = %s
+                 AND " . EventDate::sql_expr('m') . " = %s
                  LIMIT 1",
                 $parsed->event_name,
                 $parsed->event_date

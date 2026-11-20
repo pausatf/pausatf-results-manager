@@ -174,7 +174,7 @@ class RestAPI {
 
         // Get event info
         $event = get_post($event_id);
-        $event_date = get_post_meta($event_id, '_pausatf_event_date', true);
+        $event_date = EventDate::get((int) $event_id);
 
         return new \WP_REST_Response([
             'event' => [

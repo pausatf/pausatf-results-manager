@@ -142,11 +142,11 @@ class PerformanceTracker {
                 r.time_display,
                 r.athlete_age,
                 p.post_title as event_name,
-                m.meta_value as event_date,
+                " . EventDate::sql_expr('m') . " as event_date,
                 t.name as event_type
              FROM {$table} r
              LEFT JOIN {$wpdb->posts} p ON r.event_id = p.ID
-             LEFT JOIN {$wpdb->postmeta} m ON r.event_id = m.post_id AND m.meta_key = '_pausatf_event_date'
+             " . EventDate::sql_join('r.event_id', 'm') . "
              LEFT JOIN {$wpdb->term_relationships} tr ON r.event_id = tr.object_id
              LEFT JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id AND tt.taxonomy = 'pausatf_event_type'
              LEFT JOIN {$wpdb->terms} t ON tt.term_id = t.term_id
@@ -264,8 +264,8 @@ class PerformanceTracker {
                      AND r2.division = r.division
                      AND r2.time_seconds = MIN(r.time_seconds)
                      LIMIT 1) as record_holder,
-                    (SELECT m.meta_value FROM {$table} r2
-                     LEFT JOIN {$wpdb->postmeta} m ON r2.event_id = m.post_id AND m.meta_key = '_pausatf_event_date'
+                    (SELECT " . EventDate::sql_expr('m') . " FROM {$table} r2
+                     " . EventDate::sql_join('r2.event_id', 'm') . "
                      WHERE r2.event_id IN ({$event_ids})
                      AND r2.division = r.division
                      AND r2.time_seconds = MIN(r.time_seconds)
@@ -377,10 +377,10 @@ class PerformanceTracker {
                 r.athlete_age,
                 r.points,
                 p.post_title as event_name,
-                m.meta_value as event_date
+                " . EventDate::sql_expr('m') . " as event_date
              FROM {$table} r
              LEFT JOIN {$wpdb->posts} p ON r.event_id = p.ID
-             LEFT JOIN {$wpdb->postmeta} m ON r.event_id = m.post_id AND m.meta_key = '_pausatf_event_date'
+             " . EventDate::sql_join('r.event_id', 'm') . "
              LEFT JOIN {$wpdb->term_relationships} tr ON r.event_id = tr.object_id
              LEFT JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id AND tt.taxonomy = 'pausatf_event_type'
              LEFT JOIN {$wpdb->terms} t ON tt.term_id = t.term_id
@@ -388,7 +388,7 @@ class PerformanceTracker {
              AND t.name = %s
              AND r.time_seconds IS NOT NULL
              AND r.time_seconds > 0
-             ORDER BY m.meta_value ASC",
+             ORDER BY " . EventDate::sql_expr('m') . " ASC",
             $athlete_name,
             $event_type
         ), ARRAY_A);

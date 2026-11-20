@@ -19,7 +19,7 @@ final class EventJsonLd {
 
         $event_id = get_queried_object_id();
         $start = (string) get_post_meta($event_id, '_pausatf_start_datetime', true);
-        $date = (string) get_post_meta($event_id, '_pausatf_event_date', true);
+        $date = EventDate::get((int) $event_id);
         $location_name = (string) get_post_meta($event_id, '_pausatf_venue_name', true);
         if ($location_name === '') {
             $location_name = (string) get_post_meta($event_id, '_pausatf_event_location', true);

@@ -59,22 +59,22 @@ class AthleteDatabase {
 
         if ($athlete_id) {
             $results = $wpdb->get_results($wpdb->prepare(
-                "SELECT r.*, p.post_title as event_name, m.meta_value as event_date
+                "SELECT r.*, p.post_title as event_name, " . EventDate::sql_expr('m') . " as event_date
                  FROM {$results_table} r
                  LEFT JOIN {$wpdb->posts} p ON r.event_id = p.ID
-                 LEFT JOIN {$wpdb->postmeta} m ON r.event_id = m.post_id AND m.meta_key = '_pausatf_event_date'
+                 " . EventDate::sql_join('r.event_id', 'm') . "
                  WHERE r.athlete_id = %d
-                 ORDER BY m.meta_value DESC",
+                 ORDER BY " . EventDate::sql_expr('m') . " DESC",
                 $athlete_id
             ), ARRAY_A);
         } else {
             $results = $wpdb->get_results($wpdb->prepare(
-                "SELECT r.*, p.post_title as event_name, m.meta_value as event_date
+                "SELECT r.*, p.post_title as event_name, " . EventDate::sql_expr('m') . " as event_date
                  FROM {$results_table} r
                  LEFT JOIN {$wpdb->posts} p ON r.event_id = p.ID
-                 LEFT JOIN {$wpdb->postmeta} m ON r.event_id = m.post_id AND m.meta_key = '_pausatf_event_date'
+                 " . EventDate::sql_join('r.event_id', 'm') . "
                  WHERE r.athlete_name = %s
-                 ORDER BY m.meta_value DESC",
+                 ORDER BY " . EventDate::sql_expr('m') . " DESC",
                 $name
             ), ARRAY_A);
         }
@@ -230,7 +230,7 @@ class AthleteDatabase {
         }
 
         if ($season) {
-            $where[] = 'YEAR(m.meta_value) = %d';
+            $where[] = 'YEAR(' . EventDate::sql_expr('m') . ') = %d';
             $params[] = (int) $season;
         }
 
@@ -244,7 +244,7 @@ class AthleteDatabase {
                     SUM(CASE WHEN r.place = 1 THEN 1 ELSE 0 END) as wins,
                     MIN(r.place) as best_finish
                   FROM {$results_table} r
-                  LEFT JOIN {$wpdb->postmeta} m ON r.event_id = m.post_id AND m.meta_key = '_pausatf_event_date'
+                  " . EventDate::sql_join('r.event_id', 'm') . "
                   WHERE {$where_clause}
                   AND r.points IS NOT NULL
                   GROUP BY r.athlete_name, r.athlete_id

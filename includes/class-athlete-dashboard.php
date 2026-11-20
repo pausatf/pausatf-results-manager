@@ -462,10 +462,10 @@ class AthleteDashboard {
         $sql = "SELECT
                     r.*,
                     p.post_title as event_name,
-                    pm.meta_value as event_date
+                    " . EventDate::sql_expr('pm') . " as event_date
                 FROM {$results_table} r
                 INNER JOIN {$wpdb->posts} p ON r.event_id = p.ID
-                LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_pausatf_event_date'
+                " . EventDate::sql_join('p.ID', 'pm') . "
                 WHERE r.athlete_id = %d
                   AND r.time_seconds IS NOT NULL
                 ORDER BY r.time_seconds ASC";

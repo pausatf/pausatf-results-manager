@@ -131,9 +131,9 @@ class ClubManager {
                 r.athlete_name,
                 r.athlete_id,
                 COUNT(*) as event_count,
-                MAX(m.meta_value) as last_event_date
+                MAX(" . EventDate::sql_expr('m') . ") as last_event_date
              FROM {$table} r
-             LEFT JOIN {$wpdb->postmeta} m ON r.event_id = m.post_id AND m.meta_key = '_pausatf_event_date'
+             " . EventDate::sql_join('r.event_id', 'm') . "
              WHERE r.club = %s
              GROUP BY r.athlete_name, r.athlete_id
              ORDER BY event_count DESC",
@@ -235,9 +235,9 @@ class ClubManager {
                 SUM(COALESCE(r.points, 0)) as total_points,
                 AVG(r.place) as avg_place
              FROM {$table} r
-             LEFT JOIN {$wpdb->postmeta} m ON r.event_id = m.post_id AND m.meta_key = '_pausatf_event_date'
+             " . EventDate::sql_join('r.event_id', 'm') . "
              {$join}
-             WHERE YEAR(m.meta_value) = %s
+             WHERE YEAR(" . EventDate::sql_expr('m') . ") = %s
              AND r.club IS NOT NULL
              AND r.club != ''
              {$where}
@@ -264,12 +264,12 @@ class ClubManager {
             "SELECT
                 r.*,
                 p.post_title as event_name,
-                m.meta_value as event_date
+                " . EventDate::sql_expr('m') . " as event_date
              FROM {$table} r
              LEFT JOIN {$wpdb->posts} p ON r.event_id = p.ID
-             LEFT JOIN {$wpdb->postmeta} m ON r.event_id = m.post_id AND m.meta_key = '_pausatf_event_date'
+             " . EventDate::sql_join('r.event_id', 'm') . "
              WHERE r.club = %s
-             ORDER BY m.meta_value DESC, r.place ASC
+             ORDER BY " . EventDate::sql_expr('m') . " DESC, r.place ASC
              LIMIT %d",
             $club_name,
             $limit

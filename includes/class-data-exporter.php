@@ -228,12 +228,12 @@ class DataExporter {
 
         $where_clause = implode(' AND ', $where);
 
-        $query = "SELECT r.*, p.post_title as event_name, m.meta_value as event_date
+        $query = "SELECT r.*, p.post_title as event_name, " . EventDate::sql_expr('m') . " as event_date
                   FROM {$table} r
                   LEFT JOIN {$wpdb->posts} p ON r.event_id = p.ID
-                  LEFT JOIN {$wpdb->postmeta} m ON r.event_id = m.post_id AND m.meta_key = '_pausatf_event_date'
+                  " . EventDate::sql_join('r.event_id', 'm') . "
                   WHERE {$where_clause}
-                  ORDER BY m.meta_value DESC, r.place ASC
+                  ORDER BY " . EventDate::sql_expr('m') . " DESC, r.place ASC
                   LIMIT 10000";
 
         if (!empty($params)) {

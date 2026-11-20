@@ -419,15 +419,13 @@ class RaceDirectorPortal {
      * Get events for a race director
      */
     public function get_director_events(int $user_id): array {
-        $events = get_posts([
+        /** @var \WP_Post[] $events */
+        $events = get_posts(EventDate::order_query([
             'post_type' => 'pausatf_event',
             'posts_per_page' => -1,
             'author' => $user_id,
             'post_status' => ['publish', 'draft', 'pending'],
-            'orderby' => 'meta_value',
-            'meta_key' => '_pausatf_event_date',
-            'order' => 'DESC',
-        ]);
+        ]));
 
         return array_map(function ($event) {
             $types = wp_get_object_terms($event->ID, 'pausatf_event_type', ['fields' => 'names']);
@@ -436,7 +434,7 @@ class RaceDirectorPortal {
                 'id' => $event->ID,
                 'title' => $event->post_title,
                 'status' => $event->post_status,
-                'event_date' => get_post_meta($event->ID, '_pausatf_event_date', true),
+                'event_date' => EventDate::get((int) $event->ID),
                 'location' => get_post_meta($event->ID, '_pausatf_event_location', true),
                 'event_type' => !empty($types) ? $types[0] : '',
                 'result_count' => (int) get_post_meta($event->ID, '_pausatf_result_count', true),
