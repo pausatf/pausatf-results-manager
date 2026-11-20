@@ -1,0 +1,16 @@
+# Keep development files out of `git archive` and Composer dist installs,
+# so the site build ships only what WordPress loads. tools/ stays: it holds
+# WP-CLI commands run on the server with `wp --require`.
+/.gitattributes export-ignore
+/.githooks export-ignore
+/.github export-ignore
+/.gitignore export-ignore
+/CLAUDE.md export-ignore
+/composer.lock export-ignore
+/docker-compose.yml export-ignore
+/docs export-ignore
+/package-lock.json export-ignore
+/package.json export-ignore
+/phpstan.neon export-ignore
+/phpunit.xml export-ignore
+/tests export-ignore
