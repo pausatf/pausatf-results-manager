@@ -77,8 +77,10 @@ namespace {
         }
     }
     if (!function_exists('get_posts')) {
+        // Answers with the IDs a test stored for the queried post type.
         function get_posts($args = []) {
-            return [];
+            $GLOBALS['pausatf_test_post_queries'][] = $args;
+            return $GLOBALS['pausatf_test_posts_by_type'][$args['post_type'] ?? ''] ?? [];
         }
     }
     if (!function_exists('is_wp_error')) {
