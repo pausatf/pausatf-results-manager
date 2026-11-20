@@ -111,6 +111,8 @@ class AthlinksIntegration {
 
         $imported = 0;
         $skipped = 0;
+        // One athlete's history spans many events; listeners get one call per event touched.
+        $imported_by_event = [];
 
         foreach ($athlinks_results as $result) {
             // Check if already imported
@@ -120,9 +122,15 @@ class AthlinksIntegration {
             }
 
             // Import the result
-            if ($this->import_result($athlete_id, $result)) {
+            $event_id = $this->import_result($athlete_id, $result);
+            if ($event_id) {
                 $imported++;
+                $imported_by_event[$event_id] = ($imported_by_event[$event_id] ?? 0) + 1;
             }
+        }
+
+        foreach ($imported_by_event as $event_id => $count) {
+            do_action('pausatf_results_imported', $event_id, $count);
         }
 
         // Update sync timestamp
@@ -139,14 +147,16 @@ class AthlinksIntegration {
 
     /**
      * Import a single Athlinks result
+     *
+     * @return int The event the result was stored under, or 0 if it was not stored.
      */
-    private function import_result(int $athlete_id, array $result): bool {
+    private function import_result(int $athlete_id, array $result): int {
         global $wpdb;
 
         // Find or create event
         $event_id = $this->find_or_create_event($result);
         if (!$event_id) {
-            return false;
+            return 0;
         }
 
         $athlete = get_post($athlete_id);
@@ -176,7 +186,7 @@ class AthlinksIntegration {
         ];
 
         $table = $wpdb->prefix . 'pausatf_results';
-        return (bool) $wpdb->insert($table, $data);
+        return $wpdb->insert($table, $data) ? $event_id : 0;
     }
 
     /**

@@ -199,6 +199,8 @@ class AthleteClaim {
         // Link all results with this athlete name to the athlete ID
         $this->link_results_to_athlete($athlete_id);
 
+        do_action('pausatf_athlete_claimed', $athlete_id, $user_id);
+
         // Notify user
         $this->notify_user_approved($user_id, $athlete_id);
 

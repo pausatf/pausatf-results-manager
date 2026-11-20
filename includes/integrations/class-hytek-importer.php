@@ -363,6 +363,7 @@ class HyTekImporter {
 
         // Update event result count
         update_post_meta($event_id, '_pausatf_result_count', $imported);
+        do_action('pausatf_results_imported', $event_id, $imported);
 
         return $imported;
     }

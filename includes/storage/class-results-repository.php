@@ -137,6 +137,9 @@ class ResultsRepository {
              */
             do_action('pausatf_results_stored', $event_id, $storage_result);
 
+            /** Fires once per event after its results are committed (event ID, rows stored). */
+            do_action('pausatf_results_imported', $event_id, $storage_result->inserted_records);
+
         } catch (\Exception $e) {
             $wpdb->query('ROLLBACK');
             $storage_result->add_error(-1, $e->getMessage());

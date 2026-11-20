@@ -115,6 +115,7 @@ class ResultsImporter {
 
         // Import individual results
         $imported_count = $this->import_results($event_id, $parsed->results);
+        do_action('pausatf_results_imported', $event_id, $imported_count);
 
         return [
             'success' => true,

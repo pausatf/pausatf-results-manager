@@ -169,23 +169,21 @@ Settings tools, which require `manage_options` and the `pausatf_ajax` nonce: `pa
 | --- | --- | --- |
 | `pausatf_results_age_grading_imported` | edition | An age-grading table is stored. |
 | `pausatf_new_record` | record ID, record data | A record is approved. |
+| `pausatf_results_imported` | event ID, count | Once per event, after any RM importer stores that event's results (count is the rows stored). An Athlinks sync fires once for each event it added rows to. Grand Prix recomputes on it and webhooks send `result.created`. |
+| `pausatf_athlete_claimed` | athlete ID, user ID | `AthleteClaim::approve_claim()` links an athlete profile to a user, by admin approval or automatic verification. Webhooks send `athlete.claimed`. |
+| `pausatf_rankings_updated` | event, count | **Regenerate All Rankings**, once for each ranked event (5K to Marathon). The count is ranking rows written for that event across sexes and divisions, so an athlete in both an open and a masters list counts twice. Webhooks send `ranking.updated`. |
 | `pausatf_event_created`, `pausatf_event_updated` | event ID, parsed results, metadata | `ResultsRepository::store_event()` creates or updates an event (canonical import). |
 | `pausatf_results_stored` | event ID, storage result | `ResultsRepository` stores results. |
 | `pausatf_results_deleted` | event ID, count | `ResultsRepository` deletes an event's results. |
 | `pausatf_set_event_taxonomies` | event ID, parsed results, metadata | `ResultsRepository` assigns taxonomies. |
 
-`ResultsRepository` runs for the canonical event import (`POST /events/import` and the calendar command). The admin import, the sync and `POST /import` use `ResultsImporter`, which fires none of these actions.
+`ResultsRepository` runs for the canonical event import (`POST /events/import` and the calendar command). The admin import, the sync and `POST /import` use `ResultsImporter`, which fires only `pausatf_results_imported` of the actions above.
 
 ### Actions RM listens for and never fires
 
-These hooks have listeners in RM but nothing in RM triggers them, so they have effect only when another plugin or site code fires them:
-
 | Action | Listener | Effect |
 | --- | --- | --- |
-| `pausatf_result_imported` (event ID, count) | Grand Prix | Recomputes every series containing the event. |
-| `pausatf_results_imported` (event ID, count) | Webhooks | Sends `result.created`. |
-| `pausatf_athlete_claimed` (athlete ID, user ID) | Webhooks | Sends `athlete.claimed`. |
-| `pausatf_rankings_updated` (event, count) | Webhooks | Sends `ranking.updated`. |
+| `pausatf_result_imported` (event ID, count) | Grand Prix | Recomputes every series containing the event. RM fires the plural `pausatf_results_imported` instead; this one is for site code that wants a recompute. |
 
 Webhooks do send `event.created` and `event.updated` (on `save_post_pausatf_event`) and `record.created` (on `pausatf_new_record`). The events `result.updated` and `record.approved` can be selected in the admin screen, but nothing triggers them. Webhook payloads are signed with HMAC-SHA256 in the `X-PAUSATF-Signature` header (`sha256=<hex>`), with `X-PAUSATF-Event` and `X-PAUSATF-Delivery` headers.
 

@@ -134,7 +134,7 @@ The result row is the `pausatf_results` row: `athlete_name`, `athlete_id`, `athl
 
 ## Recomputing
 
-`GrandPrix` listens for the `pausatf_result_imported` action (event ID, result count) and recomputes every series containing that event. RM's own importers do not fire this action, so imports through the admin screen, the sync, or the REST routes do not update standings by themselves. A site can fire the action after an import, or call `calculate_standings()` as in the example above. Recomputing deletes and rewrites the series' standing rows.
+Every RM importer fires `pausatf_results_imported` (event ID, result count) once per event after it stores that event's results: the Import screen, the scheduled sync and batch import, `POST /pausatf/v1/import`, the canonical event import, CSV, Hy-Tek, RunSignUp, Athlinks, the timing systems and UltraSignUp. `GrandPrix` listens for it and recomputes every series containing the event, so standings follow imports without site code. It also listens for `pausatf_result_imported` with the same arguments, which RM never fires, so a site can trigger a recompute for an event itself; or call `calculate_standings()` as in the example above. Recomputing deletes and rewrites the series' standing rows.
 
 ## Display
 
