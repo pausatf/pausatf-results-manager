@@ -123,7 +123,7 @@ tests/e2e/
 | Service | Description | Port |
 |---------|-------------|------|
 | wordpress | WordPress instance | 8080 |
-| db | MySQL 8.0 database | 3306 |
+| db | MySQL 26.10 database | 3306 |
 | chrome | Selenium Chrome browser | 4444 |
 | mailhog | Email testing | 8025 |
 
