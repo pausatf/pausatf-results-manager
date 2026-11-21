@@ -72,8 +72,7 @@ class RDFExporter {
      * Initialize hooks
      */
     private function init_hooks(): void {
-        // Add RDF endpoints
-        add_action('init', [$this, 'add_rewrite_rules']);
+        FeatureManager::on_init([$this, 'add_rewrite_rules']);
         add_filter('query_vars', [$this, 'add_query_vars']);
         add_action('template_redirect', [$this, 'handle_rdf_request']);
 
@@ -128,6 +127,15 @@ class RDFExporter {
             'index.php?pausatf_rdf=void',
             'top'
         );
+
+        // Sites whose stored rules predate these endpoints need one rebuild. It
+        // runs on wp_loaded, so it also stores the /sparql rule that
+        // SPARQLEndpoint adds in the same init pass. Plain permalinks store no
+        // rule array and need none.
+        $stored = get_option('rewrite_rules');
+        if (is_array($stored) && !isset($stored['^rdf/events/?$'])) {
+            add_action('wp_loaded', static fn() => flush_rewrite_rules(false));
+        }
     }
 
     /**

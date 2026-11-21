@@ -76,7 +76,7 @@ class SPARQLEndpoint {
      * Initialize hooks
      */
     private function init_hooks(): void {
-        add_action('init', [$this, 'add_rewrite_rules']);
+        FeatureManager::on_init([$this, 'add_rewrite_rules']);
         add_filter('query_vars', [$this, 'add_query_vars']);
         add_action('template_redirect', [$this, 'handle_sparql_request']);
         add_action('rest_api_init', [$this, 'register_rest_routes']);
