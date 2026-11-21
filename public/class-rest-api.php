@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
  * REST API controller
  */
 class RestAPI {
-    private const NAMESPACE = 'pausatf/v1';
+    private const REST_NAMESPACE = 'pausatf/v1';
 
     private static ?RestAPI $instance = null;
 
@@ -35,7 +35,7 @@ class RestAPI {
      */
     public function register_routes(): void {
         // Get event results
-        register_rest_route(self::NAMESPACE, '/events/(?P<id>\d+)/results', [
+        register_rest_route(self::REST_NAMESPACE, '/events/(?P<id>\d+)/results', [
             'methods' => 'GET',
             'callback' => [$this, 'get_event_results'],
             'permission_callback' => '__return_true',
@@ -55,7 +55,7 @@ class RestAPI {
         ]);
 
         // Search athletes
-        register_rest_route(self::NAMESPACE, '/athletes/search', [
+        register_rest_route(self::REST_NAMESPACE, '/athletes/search', [
             'methods' => 'GET',
             'callback' => [$this, 'search_athletes'],
             'permission_callback' => '__return_true',
@@ -73,7 +73,7 @@ class RestAPI {
         ]);
 
         // Get athlete results
-        register_rest_route(self::NAMESPACE, '/athletes/(?P<name>.+)/results', [
+        register_rest_route(self::REST_NAMESPACE, '/athletes/(?P<name>.+)/results', [
             'methods' => 'GET',
             'callback' => [$this, 'get_athlete_results'],
             'permission_callback' => '__return_true',
@@ -86,7 +86,7 @@ class RestAPI {
         ]);
 
         // Get leaderboard
-        register_rest_route(self::NAMESPACE, '/leaderboard', [
+        register_rest_route(self::REST_NAMESPACE, '/leaderboard', [
             'methods' => 'GET',
             'callback' => [$this, 'get_leaderboard'],
             'permission_callback' => '__return_true',
@@ -105,7 +105,7 @@ class RestAPI {
         ]);
 
         // Import endpoint (requires auth)
-        register_rest_route(self::NAMESPACE, '/import', [
+        register_rest_route(self::REST_NAMESPACE, '/import', [
             'methods' => 'POST',
             'callback' => [$this, 'import_results'],
             'permission_callback' => [$this, 'can_import'],
@@ -119,7 +119,7 @@ class RestAPI {
         ]);
 
         // Import one validated canonical event record from the GitHub pipeline.
-        register_rest_route(self::NAMESPACE, '/events/import', [
+        register_rest_route(self::REST_NAMESPACE, '/events/import', [
             'methods' => 'POST',
             'callback' => [$this, 'import_canonical_event'],
             'permission_callback' => [$this, 'can_import'],
@@ -129,14 +129,14 @@ class RestAPI {
         ]);
 
         // Get divisions
-        register_rest_route(self::NAMESPACE, '/divisions', [
+        register_rest_route(self::REST_NAMESPACE, '/divisions', [
             'methods' => 'GET',
             'callback' => [$this, 'get_divisions'],
             'permission_callback' => '__return_true',
         ]);
 
         // Get seasons/years
-        register_rest_route(self::NAMESPACE, '/seasons', [
+        register_rest_route(self::REST_NAMESPACE, '/seasons', [
             'methods' => 'GET',
             'callback' => [$this, 'get_seasons'],
             'permission_callback' => '__return_true',
