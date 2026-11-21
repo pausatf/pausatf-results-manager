@@ -38,7 +38,7 @@ class USATFRulesEngine {
         return self::$instance;
     }
 
-    public function __construct(int $year = null) {
+    public function __construct(?int $year = null) {
         $this->rules_year = $year ?? (int) date('Y');
     }
 
@@ -91,7 +91,7 @@ class USATFRulesEngine {
      * (Rule 300.1(b)). Open, U20 and masters ages are taken on a date instead; see
      * USATFAgeDivisions::age_on() and AGE_RULES.
      */
-    public function calculate_competition_age(\DateTime $birth_date, int $competition_year = null): int {
+    public function calculate_competition_age(\DateTime $birth_date, ?int $competition_year = null): int {
         $competition_year = $competition_year ?? $this->rules_year;
         $dec31 = new \DateTime("{$competition_year}-12-31");
 
