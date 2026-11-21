@@ -21,9 +21,22 @@ wait_for() {
 
 echo "=== PAUSATF Results Manager E2E Test Setup ==="
 
+# Probe with PHP's mysqli, the driver WordPress itself uses. The MariaDB client
+# in the wordpress:cli image rejects MySQL's self-signed certificate and has no
+# caching_sha2_password plugin, so it cannot log in to MySQL 8.4 or newer.
+mysql_ready() {
+    # shellcheck disable=SC2016 # PHP variables, not shell expansions
+    php -r '
+        mysqli_report(MYSQLI_REPORT_OFF);
+        $db = mysqli_init();
+        $db->options(MYSQLI_OPT_CONNECT_TIMEOUT, 3);
+        exit(@$db->real_connect(getenv("DB_HOST"), getenv("DB_USER"), getenv("DB_PASSWORD")) ? 0 : 1);
+    '
+}
+
 # Wait for MySQL to be ready
 echo "Waiting for MySQL..."
-wait_for mysql --connect-timeout=3 -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASSWORD" -e "SELECT 1"
+wait_for mysql_ready
 echo "MySQL is ready!"
 
 # Wait for WordPress to be ready

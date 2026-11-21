@@ -63,6 +63,9 @@ services:
   wp-cli:
     image: wordpress:cli-php8.4
     container_name: pausatf_wp_cli
+    # Match www-data in the Debian-based wordpress image (33); the Alpine CLI
+    # image defaults to 82 and cannot write wp-config.php in the shared volume.
+    user: "33:33"
     depends_on:
       wordpress:
         condition: service_healthy
