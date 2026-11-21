@@ -20,7 +20,7 @@
         "security:check": "npm run security:audit && npm run sbom"
     },
     "devDependencies": {
-        "@cyclonedx/cyclonedx-npm": "^6.0.0",
+        "@cyclonedx/cyclonedx-npm": "^7.0.0",
         "@types/node": "^26.6.6",
         "@wordpress/eslint-plugin": "^28.1.0",
         "@wordpress/scripts": "^37.1.0",
@@ -28,7 +28,8 @@
         "prettier": "^3.10.1",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
-        "jest": "^30.0.0"
+        "jest": "^30.0.0",
+        "xmlbuilder2": "^4.0.3"
     },
     "engines": {
         "node": ">=22.22.2",
