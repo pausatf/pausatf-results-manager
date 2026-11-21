@@ -97,13 +97,6 @@ class SPARQLEndpoint {
             'index.php?pausatf_sparql=1',
             'top'
         );
-
-        // Sites whose stored rules predate these endpoints need one rebuild.
-        // Plain permalinks store no rule array and need none.
-        $stored = get_option('rewrite_rules');
-        if (is_array($stored) && !isset($stored['^sparql/?$'])) {
-            add_action('wp_loaded', static fn() => flush_rewrite_rules(false));
-        }
     }
 
     /**

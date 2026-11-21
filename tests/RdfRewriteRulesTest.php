@@ -33,8 +33,8 @@ final class RdfRewriteRulesTest extends TestCase
             }
             function add_filter(...$args): void {
             }
-            function home_url(): string {
-                return 'https://example.test';
+            function home_url(string $path = ''): string {
+                return 'https://example.test' . $path;
             }
             function trailingslashit(string $value): string {
                 return rtrim($value, '/') . '/';
@@ -47,12 +47,17 @@ final class RdfRewriteRulesTest extends TestCase
         $GLOBALS['pausatf_test_hooks'] = [];
     }
 
+    /** Builds both endpoints the way the plugin's init bootstrap does. */
+    private function buildEndpoints(): array
+    {
+        return [new RDFExporter(), new SPARQLEndpoint()];
+    }
+
     public function testRulesAreRegisteredWhenBuiltDuringInit(): void
     {
         $GLOBALS['pausatf_test_init_count'] = 1;
 
-        new RDFExporter();
-        new SPARQLEndpoint();
+        $this->buildEndpoints();
 
         $rules = $GLOBALS['pausatf_test_rewrite_rules'];
         self::assertSame('index.php?pausatf_rdf=events', $rules['^rdf/events/?$'] ?? null);
@@ -64,8 +69,7 @@ final class RdfRewriteRulesTest extends TestCase
 
     public function testRulesWaitForInitWhenBuiltEarlier(): void
     {
-        new RDFExporter();
-        new SPARQLEndpoint();
+        $this->buildEndpoints();
 
         self::assertSame([], $GLOBALS['pausatf_test_rewrite_rules']);
         self::assertCount(2, $GLOBALS['pausatf_test_hooks']['init']);
@@ -76,7 +80,7 @@ final class RdfRewriteRulesTest extends TestCase
         $GLOBALS['pausatf_test_init_count'] = 1;
         $GLOBALS['pausatf_test_stored_rules'] = ['^feed/?$' => 'index.php?feed=rss2'];
 
-        new RDFExporter();
+        $this->buildEndpoints();
 
         self::assertCount(1, $GLOBALS['pausatf_test_hooks']['wp_loaded'] ?? []);
     }
@@ -86,9 +90,9 @@ final class RdfRewriteRulesTest extends TestCase
         $GLOBALS['pausatf_test_init_count'] = 1;
 
         // Plain permalinks: WordPress stores no rule array at all.
-        new RDFExporter();
+        $this->buildEndpoints();
         $GLOBALS['pausatf_test_stored_rules'] = ['^rdf/events/?$' => 'index.php?pausatf_rdf=events'];
-        new RDFExporter();
+        $this->buildEndpoints();
 
         self::assertArrayNotHasKey('wp_loaded', $GLOBALS['pausatf_test_hooks']);
     }
