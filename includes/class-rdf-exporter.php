@@ -72,13 +72,7 @@ class RDFExporter {
      * Initialize hooks
      */
     private function init_hooks(): void {
-        // This object is built from an init callback at priority 20, after
-        // priority 10 has run, so a listener added to init now would never fire.
-        if (did_action('init')) {
-            $this->add_rewrite_rules();
-        } else {
-            add_action('init', [$this, 'add_rewrite_rules']);
-        }
+        FeatureManager::on_init([$this, 'add_rewrite_rules']);
         add_filter('query_vars', [$this, 'add_query_vars']);
         add_action('template_redirect', [$this, 'handle_rdf_request']);
 

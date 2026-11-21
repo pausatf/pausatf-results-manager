@@ -41,6 +41,7 @@ final class RdfRewriteRulesTest extends TestCase
             }
         }
 
+        require_once __DIR__ . '/../includes/class-feature-manager.php';
         require_once __DIR__ . '/../includes/class-rdf-exporter.php';
         require_once __DIR__ . '/../includes/class-sparql-endpoint.php';
         // Loading the files registers their own init bootstrap; start each test clean.

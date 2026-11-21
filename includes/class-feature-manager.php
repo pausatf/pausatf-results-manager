@@ -404,6 +404,22 @@ class FeatureManager {
     }
 
     /**
+     * Run a callback on init, or at once when init has already started.
+     *
+     * Feature classes are built from init callbacks at priority 20. A listener
+     * they add to init at the default priority would never fire.
+     *
+     * @param callable $callback Callback that registers rewrite rules or similar init-time state
+     */
+    public static function on_init(callable $callback): void {
+        if (did_action('init')) {
+            $callback();
+        } else {
+            add_action('init', $callback);
+        }
+    }
+
+    /**
      * Check if a feature is enabled
      *
      * @param string $feature_id Feature identifier
