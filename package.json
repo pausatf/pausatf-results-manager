@@ -20,7 +20,7 @@
         "security:check": "npm run security:audit && npm run sbom"
     },
     "devDependencies": {
-        "@cyclonedx/cyclonedx-npm": "^7.0.0",
+        "@cyclonedx/cyclonedx-npm": "^7.0.1",
         "@types/node": "^26.6.6",
         "@wordpress/eslint-plugin": "^28.1.0",
         "@wordpress/scripts": "^37.1.0",
